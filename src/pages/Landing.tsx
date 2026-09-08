@@ -173,11 +173,24 @@ export default function Landing() {
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1400&h=900&fit=crop')] bg-cover bg-center opacity-[0.07]" />
         </motion.div>
 
-        {/* Floating beans */}
+        {/* Floating beans — more, varied sizes */}
         <FloatingBean className="top-28 left-[8%] opacity-20" delay={0} />
         <FloatingBean className="top-44 right-[12%] opacity-15" delay={1.5} />
         <FloatingBean className="bottom-36 left-[18%] opacity-10" delay={3} />
         <FloatingBean className="bottom-52 right-[25%] opacity-[0.08]" delay={4} />
+        <FloatingBean className="top-60 left-[45%] opacity-[0.06]" delay={2} />
+        <FloatingBean className="bottom-24 right-[40%] opacity-[0.05]" delay={5} />
+
+        {/* Animated particle dots */}
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={`p-${i}`}
+            className="absolute w-1 h-1 rounded-full bg-gold/20"
+            style={{ top: `${15 + (i * 7) % 70}%`, left: `${5 + (i * 13) % 90}%` }}
+            animate={{ opacity: [0.1, 0.5, 0.1], scale: [1, 1.5, 1] }}
+            transition={{ duration: 4 + (i % 3), delay: i * 0.4, repeat: Infinity, ease: "easeInOut" as const }}
+          />
+        ))}
 
         {/* Cinematic Intro Sequence */}
         <AnimatePresence>
@@ -211,28 +224,72 @@ export default function Landing() {
                 </motion.div>
               </motion.div>
 
-              {/* Splash effect */}
+              {/* Splash / ripple ring effect */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 1.2, 1.8, 2.4], opacity: [0, 0.5, 0.3, 0] }}
+                transition={{ duration: 1.8, delay: 1.4, ease: "easeOut" as const }}
+                className="absolute"
+              >
+                <div className="w-48 h-48 rounded-full border-2 border-gold/30" />
+              </motion.div>
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 1, 1.6, 2.2], opacity: [0, 0.4, 0.2, 0] }}
+                transition={{ duration: 2, delay: 1.6, ease: "easeOut" as const }}
+                className="absolute"
+              >
+                <div className="w-48 h-48 rounded-full border border-dusty-rose/20" />
+              </motion.div>
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: [0, 1.5, 2], opacity: [0, 0.6, 0] }}
-                transition={{ duration: 1.2, delay: 1.6, ease: "easeOut" as const }}
+                transition={{ duration: 1.2, delay: 1.8, ease: "easeOut" as const }}
                 className="absolute"
               >
-                <div className="w-64 h-64 rounded-full bg-dusty-rose/30 blur-2xl" />
+                <div className="w-64 h-64 rounded-full bg-gold/10 blur-3xl" />
               </motion.div>
 
-              {/* Brand reveal */}
+              {/* Brand reveal with staggered lines */}
               <motion.div
                 className="absolute text-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 2.2, duration: 0.6 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 2.0, duration: 0.8 }}
               >
-                <div className="text-white/40 text-sm tracking-[0.3em] uppercase mb-2">Welcome to</div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2.1, duration: 0.4 }}
+                  className="text-white/40 text-sm tracking-[0.3em] uppercase mb-2"
+                >
+                  Welcome to
+                </motion.div>
                 <div className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
-                  <div className="text-white/80 text-2xl sm:text-3xl tracking-[0.4em] uppercase mb-1">The</div>
-                  <div>BELGRAVIA</div>
-                  <div className="text-gradient-brand" style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #A8845C, #B8808A)", WebkitBackgroundClip: "text", backgroundClip: "text" }}>ROAST</div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 2.3, duration: 0.5 }}
+                    className="text-white/80 text-2xl sm:text-3xl tracking-[0.4em] uppercase mb-1"
+                  >
+                    The
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 2.5, duration: 0.5, type: "spring" }}
+                  >
+                    BELGRAVIA
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 2.8, duration: 0.5 }}
+                    className="text-gradient-brand"
+                    style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #A8845C, #B8808A)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
+                  >
+                    ROAST
+                  </motion.div>
                 </div>
               </motion.div>
             </motion.div>
@@ -253,7 +310,16 @@ export default function Landing() {
               <h1 className="font-display leading-[0.95] mb-4">
                 <span className="block text-white/70 text-3xl sm:text-4xl lg:text-5xl tracking-[0.2em] uppercase">The</span>
                 <span className="block text-white text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight">BELGRAVIA</span>
-                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight" style={{ background: "linear-gradient(135deg, #A8845C, #B8808A, #C4A478)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ROAST</span>
+                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight relative" style={{ background: "linear-gradient(135deg, #A8845C, #B8808A, #C4A478)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                  ROAST
+                  {/* Shimmer line across ROAST */}
+                  <motion.span
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 45%, transparent 55%)", backgroundSize: "200% 100%" }}
+                    animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                    transition={{ duration: 4, delay: 4.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" as const }}
+                  />
+                </span>
               </h1>
             </motion.div>
 
@@ -283,9 +349,11 @@ export default function Landing() {
               transition={{ delay: 4, duration: 0.5 }}
               className="flex flex-wrap gap-4 mb-16"
             >
-              <Link to="/menu" className="btn-brand inline-flex items-center gap-2">
-                Order Now <ArrowRight className="h-4 w-4" />
-              </Link>
+              <motion.div animate={{ boxShadow: ["0 4px 15px rgba(168,132,92,0.25)", "0 4px 25px rgba(168,132,92,0.4)", "0 4px 15px rgba(168,132,92,0.25)"] }} transition={{ duration: 3, repeat: Infinity }} className="inline-flex rounded-xl">
+                <Link to="/menu" className="btn-brand inline-flex items-center gap-2">
+                  Order Now <ArrowRight className="h-4 w-4" />
+                </Link>
+              </motion.div>
               <Link
                 to="/menu"
                 className="inline-flex items-center gap-2 border border-white/20 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
@@ -305,11 +373,16 @@ export default function Landing() {
                 { num: "4.8★", label: "Average Rating" },
                 { num: "80+", label: "Menu Items" },
                 { num: "7 AM–11 PM", label: "Open Daily" },
-              ].map((stat) => (
-                <div key={stat.label}>
+              ].map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 4.4 + i * 0.1, duration: 0.4 }}
+                >
                   <div className="text-lg font-bold text-white">{stat.num}</div>
                   <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">{stat.label}</div>
-                </div>
+                </motion.div>
               ))}
             </motion.div>
           </div>
@@ -322,9 +395,15 @@ export default function Landing() {
           transition={{ delay: 4.5 }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/30"
         >
-          <span className="text-[10px] uppercase tracking-widest">Scroll to Discover</span>
-          <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-            <ChevronDown className="h-4 w-4" />
+          <motion.span
+            className="text-[10px] uppercase tracking-widest"
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
+          >
+            Scroll to Discover
+          </motion.span>
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}>
+            <ChevronDown className="h-5 w-5" />
           </motion.div>
         </motion.div>
 
