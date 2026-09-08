@@ -2,7 +2,6 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 
-// default user roles. can add / remove based on the project as needed
 export const ROLES = {
   ADMIN: "admin",
   USER: "user",
@@ -18,26 +17,130 @@ export type Role = Infer<typeof roleValidator>;
 
 const schema = defineSchema(
   {
-    // default auth tables using convex auth.
-    ...authTables, // do not remove or modify
+    ...authTables,
 
-    // the users table is the default users table that is brought in by the authTables
     users: defineTable({
-      name: v.optional(v.string()), // name of the user. do not remove
-      image: v.optional(v.string()), // image of the user. do not remove
-      email: v.optional(v.string()), // email of the user. do not remove
-      emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
-      isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerificationTime: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      role: v.optional(roleValidator),
+      phone: v.optional(v.string()),
+      address: v.optional(v.string()),
+    }).index("email", ["email"]),
 
-      role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    categories: defineTable({
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      image: v.optional(v.string()),
+      order: v.number(),
+      active: v.boolean(),
+    }).index("by_slug", ["slug"]),
 
-    // add other tables here
+    products: defineTable({
+      name: v.string(),
+      slug: v.string(),
+      description: v.string(),
+      price: v.number(),
+      discountPrice: v.optional(v.number()),
+      image: v.string(),
+      categoryId: v.id("categories"),
+      isVeg: v.boolean(),
+      calories: v.number(),
+      prepTime: v.number(),
+      ingredients: v.array(v.string()),
+      allergens: v.array(v.string()),
+      available: v.boolean(),
+      customizations: v.optional(
+        v.array(
+          v.object({
+            name: v.string(),
+            options: v.array(
+              v.object({ name: v.string(), price: v.number() }),
+            ),
+          }),
+        ),
+      ),
+      addOns: v.optional(
+        v.array(v.object({ name: v.string(), price: v.number() })),
+      ),
+      tags: v.array(v.string()),
+    }).index("by_category", ["categoryId"]).index("by_slug", ["slug"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    orders: defineTable({
+      userId: v.optional(v.id("users")),
+      items: v.array(
+        v.object({
+          productId: v.id("products"),
+          name: v.string(),
+          price: v.number(),
+          quantity: v.number(),
+          customizations: v.optional(v.array(v.string())),
+          addOns: v.optional(v.array(v.string())),
+        }),
+      ),
+      total: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("confirmed"),
+        v.literal("preparing"),
+        v.literal("ready"),
+        v.literal("delivered"),
+        v.literal("cancelled"),
+      ),
+      paymentStatus: v.union(
+        v.literal("pending"),
+        v.literal("paid"),
+        v.literal("failed"),
+      ),
+      paymentMethod: v.optional(v.string()),
+      tableNumber: v.optional(v.number()),
+      tableId: v.optional(v.id("tables")),
+      guestName: v.optional(v.string()),
+      guestPhone: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      orderType: v.union(
+        v.literal("dine-in"),
+        v.literal("takeaway"),
+        v.literal("delivery"),
+      ),
+    }).index("by_user", ["userId"]).index("by_status", ["status"]),
+
+    tables: defineTable({
+      number: v.number(),
+      capacity: v.number(),
+      status: v.union(
+        v.literal("available"),
+        v.literal("occupied"),
+        v.literal("reserved"),
+      ),
+      section: v.string(),
+      qrCode: v.optional(v.string()),
+    }).index("by_number", ["number"]),
+
+    offers: defineTable({
+      code: v.string(),
+      description: v.string(),
+      discountType: v.union(v.literal("percentage"), v.literal("fixed")),
+      discountValue: v.number(),
+      minOrder: v.number(),
+      maxDiscount: v.optional(v.number()),
+      validFrom: v.number(),
+      validUntil: v.number(),
+      active: v.boolean(),
+      usageLimit: v.optional(v.number()),
+      usedCount: v.number(),
+    }).index("by_code", ["code"]),
+
+    userContent: defineTable({
+      userId: v.id("users"),
+      imageUrl: v.string(),
+      caption: v.optional(v.string()),
+      rating: v.optional(v.number()),
+      approved: v.boolean(),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

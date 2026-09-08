@@ -1,0 +1,332 @@
+import { useParams, Link } from "react-router";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { getProductBySlug, getProductsByCategory } from "@/data/menu";
+import { addToCart } from "@/lib/cart";
+import { toast } from "sonner";
+
+export default function ProductDetail() {
+  const { slug } = useParams();
+  const product = getProductBySlug(slug || "");
+
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string | undefined>();
+  const [selectedMilk, setSelectedMilk] = useState<string | undefined>();
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="text-5xl mb-4">🔍</div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Product not found</h2>
+            <Link to="/menu" className="text-caramel text-sm font-medium hover:underline">
+              Back to Menu
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const sizeCustomization = product.customizations?.find((c) => c.name === "Size");
+  const milkCustomization = product.customizations?.find((c) => c.name === "Milk");
+  const otherCustomizations = product.customizations?.filter((c) => c.name !== "Size" && c.name !== "Milk") || [];
+
+  const related = getProductsByCategory(product.category)
+    .filter((p) => p.id !== product.id)
+    .slice(0, 3);
+
+  const basePrice = product.discountPrice ?? product.price;
+  let extraPrice = 0;
+  if (selectedSize === "Medium") extraPrice += 20;
+  if (selectedSize === "Large") extraPrice += 40;
+  if (selectedMilk === "Oat Milk" || selectedMilk === "Almond Milk") extraPrice += 30;
+  if (product.addOns) {
+    selectedAddOns.forEach((name) => {
+      const addOn = product.addOns!.find((a) => a.name === name);
+      if (addOn) extraPrice += addOn.price;
+    });
+  }
+  const totalPrice = (basePrice + extraPrice) * quantity;
+
+  const toggleAddOn = (name: string) => {
+    setSelectedAddOns((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+    );
+  };
+
+  const handleAdd = () => {
+    addToCart(product, quantity, {
+      selectedSize,
+      selectedMilk,
+      addOns: selectedAddOns.length ? selectedAddOns : undefined,
+    });
+    toast.success(`${product.name} × ${quantity} added to cart`);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      {/* Hero Image */}
+      <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden">
+        <img
+          src={product.image}
+          alt={product.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <Link
+          to="/menu"
+          className="absolute top-24 left-4 sm:left-8 flex h-10 w-10 items-center justify-center rounded-xl glass-dark text-white transition-colors hover:bg-white/20"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-20 relative z-10 pb-32 lg:pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Tags */}
+              <div className="flex items-center gap-2 mb-3">
+                {product.isVeg ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                    <Leaf className="h-3 w-3" /> Vegetarian
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Non-Veg</span>
+                )}
+                {product.bestSeller && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-caramel bg-caramel/10 px-2 py-0.5 rounded-full">
+                    <Star className="h-3 w-3 fill-current" /> Best Seller
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">{product.name}</h1>
+              <p className="text-muted-foreground leading-relaxed mb-6">{product.description}</p>
+
+              {/* Quick Info */}
+              <div className="flex items-center gap-6 mb-8">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  {product.prepTime} min prep
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Flame className="h-4 w-4" />
+                  {product.calories} calories
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              {product.ingredients.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Ingredients</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.ingredients.map((ing) => (
+                      <span key={ing} className="text-xs bg-muted px-3 py-1 rounded-full text-muted-foreground">
+                        {ing}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Allergens */}
+              {product.allergens.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Allergens</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.allergens.map((a) => (
+                      <span key={a} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-medium">
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Sidebar - Order */}
+          <div className="lg:col-span-1">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl border border-border/50 shadow-sm p-6 sticky top-24"
+            >
+              {/* Price */}
+              <div className="flex items-baseline gap-3 mb-6">
+                <span className="text-3xl font-bold text-foreground">₹{totalPrice}</span>
+                {product.discountPrice && (
+                  <span className="text-lg text-muted-foreground line-through">₹{product.price * quantity}</span>
+                )}
+              </div>
+
+              {/* Size Customization */}
+              {sizeCustomization && (
+                <div className="mb-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">{sizeCustomization.name}</h4>
+                  <div className="flex gap-2">
+                    {sizeCustomization.options.map((opt) => (
+                      <button
+                        key={opt.name}
+                        onClick={() => setSelectedSize(opt.name)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                          selectedSize === opt.name
+                            ? "border-caramel bg-caramel/10 text-caramel"
+                            : "border-border text-foreground/70 hover:bg-muted"
+                        }`}
+                      >
+                        {opt.name}
+                        {opt.price > 0 && <span className="text-xs ml-1">+₹{opt.price}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Milk Customization */}
+              {milkCustomization && (
+                <div className="mb-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">{milkCustomization.name}</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {milkCustomization.options.map((opt) => (
+                      <button
+                        key={opt.name}
+                        onClick={() => setSelectedMilk(opt.name)}
+                        className={`py-2 rounded-xl text-sm font-medium border transition-all ${
+                          selectedMilk === opt.name
+                            ? "border-caramel bg-caramel/10 text-caramel"
+                            : "border-border text-foreground/70 hover:bg-muted"
+                        }`}
+                      >
+                        {opt.name}
+                        {opt.price > 0 && <span className="text-xs ml-1">+₹{opt.price}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Customizations */}
+              {otherCustomizations.map((custom) => (
+                <div key={custom.name} className="mb-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">{custom.name}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {custom.options.map((opt) => (
+                      <button
+                        key={opt.name}
+                        className="px-3 py-2 rounded-xl text-sm border border-border text-foreground/70 hover:bg-muted"
+                      >
+                        {opt.name}
+                        {opt.price > 0 && <span className="text-xs ml-1">+₹{opt.price}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Add-ons */}
+              {product.addOns && product.addOns.length > 0 && (
+                <div className="mb-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Add-ons</h4>
+                  <div className="space-y-2">
+                    {product.addOns.map((addOn) => (
+                      <label
+                        key={addOn.name}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          selectedAddOns.includes(addOn.name)
+                            ? "border-caramel bg-caramel/5"
+                            : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedAddOns.includes(addOn.name)}
+                            onChange={() => toggleAddOn(addOn.name)}
+                            className="accent-caramel"
+                          />
+                          <span className="text-sm">{addOn.name}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">+₹{addOn.price}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity */}
+              <div className="flex items-center gap-4 mb-6">
+                <h4 className="text-sm font-semibold text-foreground">Quantity</h4>
+                <div className="flex items-center gap-3 bg-muted rounded-xl px-1">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="font-semibold text-sm w-6 text-center">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Add to Cart */}
+              <button
+                onClick={handleAdd}
+                className="w-full flex items-center justify-center gap-2 bg-caramel hover:bg-caramel/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-caramel/20"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Add to Cart — ₹{totalPrice}
+              </button>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Related Items */}
+        {related.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-xl font-bold text-foreground mb-6">You Might Also Like</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {related.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/menu/${item.slug}`}
+                  className="bg-white rounded-2xl overflow-hidden border border-border/50 shadow-sm hover:shadow-lg transition-all"
+                >
+                  <img src={item.image} alt={item.name} className="h-40 w-full object-cover" />
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm text-foreground">{item.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
+                    <div className="mt-3 font-bold text-foreground">₹{item.discountPrice ?? item.price}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Footer />
+    </div>
+  );
+}

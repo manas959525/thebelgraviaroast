@@ -1,26 +1,33 @@
+import { Link } from "react-router";
 import { motion } from "framer-motion";
+import { ArrowLeft, Coffee } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 export default function NotFound() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
-    >
-
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-lg text-gray-600">Page Not Found</p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center px-4"
+        >
+          <div className="text-7xl mb-4">☕</div>
+          <h1 className="text-5xl font-bold text-foreground mb-3">404</h1>
+          <p className="text-lg text-muted-foreground mb-2">This page seems to have wandered off.</p>
+          <p className="text-sm text-muted-foreground mb-8">
+            Perhaps it's out grabbing a coffee. Let's get you back on track.
+          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 bg-caramel hover:bg-caramel/90 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+        </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }

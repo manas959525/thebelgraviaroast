@@ -9,23 +9,35 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
-// Lazy load route components for better code splitting
+// Lazy load all route components
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const MenuPage = lazy(() => import("./pages/Menu.tsx"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail.tsx"));
+const CartPage = lazy(() => import("./pages/Cart.tsx"));
+const CheckoutPage = lazy(() => import("./pages/Checkout.tsx"));
+const PaymentPage = lazy(() => import("./pages/Payment.tsx"));
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder.tsx"));
+const CustomerOrders = lazy(() => import("./pages/CustomerOrders.tsx"));
+const About = lazy(() => import("./pages/About.tsx"));
+const Offers = lazy(() => import("./pages/Offers.tsx"));
+const Contact = lazy(() => import("./pages/Contact.tsx"));
+const TableOrdering = lazy(() => import("./pages/TableOrdering.tsx"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
 
-// Simple loading fallback for route transitions
 function RouteLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <div className="h-5 w-5 border-2 border-caramel/30 border-t-caramel rounded-full animate-spin" />
+        <span className="text-sm">Loading...</span>
+      </div>
     </div>
   );
 }
 
-/** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
- *  crashing the whole app (e.g. hook errors in WebContainer environment). */
 class ToolbarErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -42,7 +54,6 @@ class ToolbarErrorBoundary extends React.Component<
   }
 }
 
-/** Hard guard so runtime errors never leave the preview as a blank page. */
 class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; message: string; stack: string }
@@ -67,11 +78,6 @@ class RootErrorBoundary extends React.Component<
             <p className="mt-2 text-xs text-muted-foreground break-words">
               {this.state.message}
             </p>
-            {this.state.stack && (
-              <pre className="mt-3 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto rounded border border-border/60 p-2">
-                {this.state.stack}
-              </pre>
-            )}
           </div>
         </div>
       );
@@ -81,8 +87,6 @@ class RootErrorBoundary extends React.Component<
 }
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
-
-
 
 function RouteSyncer() {
   const location = useLocation();
@@ -107,7 +111,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -119,19 +122,32 @@ createRoot(document.getElementById("root")!).render(
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
+              {/* Public */}
               <Route path="/" element={<Landing />} />
-              <Route
-                path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
-              />
+              <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
+              <Route path="/menu" element={<MenuPage />} />
+              <Route path="/menu/:slug" element={<ProductDetail />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/payment" element={<PaymentPage />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
+              <Route path="/track-order" element={<TrackOrder />} />
+              <Route path="/orders" element={<CustomerOrders />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/offers" element={<Offers />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/table-ordering" element={<TableOrdering />} />
+
+              {/* Admin (protected) */}
               <Route
                 path="/dashboard"
                 element={
                   <RequireAuth>
-                    <Dashboard />
+                    <AdminDashboard />
                   </RequireAuth>
                 }
               />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
