@@ -68,10 +68,10 @@ export default function OrderConfirmation() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-caramel/5 rounded-2xl border border-caramel/20 p-6 mb-8 text-left"
+            className="bg-gold/5 rounded-2xl border border-gold/20 p-6 mb-8 text-left"
           >
             <div className="flex items-start gap-3">
-              <Phone className="h-5 w-5 text-caramel mt-0.5 shrink-0" />
+              <Phone className="h-5 w-5 text-gold mt-0.5 shrink-0" />
               <div>
                 <h4 className="font-semibold text-sm mb-1">Need Help?</h4>
                 <p className="text-xs text-muted-foreground">
@@ -89,7 +89,7 @@ export default function OrderConfirmation() {
           >
             <Link
               to="/track-order"
-              className="inline-flex items-center justify-center gap-2 bg-caramel text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-caramel/90 transition-all"
+              className="inline-flex items-center justify-center gap-2 bg-gold text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
             >
               Track Order <ArrowRight className="h-4 w-4" />
             </Link>

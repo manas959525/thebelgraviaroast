@@ -35,9 +35,9 @@ export default function TrackOrder() {
                 <h3 className="font-semibold text-foreground">Preparing Your Order</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Estimated time: 8–12 minutes</p>
               </div>
-              <div className="flex items-center gap-1.5 bg-caramel/10 px-3 py-1.5 rounded-full">
-                <Clock className="h-3.5 w-3.5 text-caramel" />
-                <span className="text-xs font-semibold text-caramel">In Progress</span>
+              <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-full">
+                <Clock className="h-3.5 w-3.5 text-gold" />
+                <span className="text-xs font-semibold text-gold">In Progress</span>
               </div>
             </div>
 
@@ -47,7 +47,7 @@ export default function TrackOrder() {
                 initial={{ width: 0 }}
                 animate={{ width: "55%" }}
                 transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full bg-caramel rounded-full"
+                className="h-full bg-gold rounded-full"
               />
             </div>
 
@@ -68,7 +68,7 @@ export default function TrackOrder() {
                         step.done
                           ? "bg-sage text-white"
                           : step.active
-                          ? "bg-caramel text-white"
+                          ? "bg-gold text-white"
                           : "bg-muted text-muted-foreground"
                       }`}>
                         <Icon className="h-4 w-4" />
@@ -78,7 +78,7 @@ export default function TrackOrder() {
                       )}
                     </div>
                     <div className="pb-6">
-                      <h4 className={`text-sm font-medium ${step.active ? "text-caramel" : step.done ? "text-foreground" : "text-muted-foreground"}`}>
+                      <h4 className={`text-sm font-medium ${step.active ? "text-gold" : step.done ? "text-foreground" : "text-muted-foreground"}`}>
                         {step.label}
                       </h4>
                       <p className="text-xs text-muted-foreground mt-0.5">{step.desc}</p>
@@ -99,7 +99,7 @@ export default function TrackOrder() {
             </Link>
             <Link
               to="/menu"
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-caramel text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-caramel/90 transition-all"
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-gold text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
             >
               Order More <ArrowRight className="h-4 w-4" />
             </Link>

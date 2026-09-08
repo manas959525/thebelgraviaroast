@@ -69,13 +69,13 @@ export default function Navbar() {
           <div className="flex h-16 items-center justify-between lg:h-20">
             {/* Logo — The Belgravia Roast */}
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral text-white transition-transform group-hover:scale-105">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-dusty-rose text-white transition-transform group-hover:scale-105">
                 <Coffee className="h-5 w-5" />
               </div>
               <div className="hidden sm:block leading-tight">
                 <div className="text-[10px] font-medium text-muted-foreground tracking-[0.2em] uppercase -mb-0.5">The</div>
                 <span className="text-base font-bold tracking-tight text-foreground">BELGRAVIA</span>
-                <span className="text-base font-light text-coral ml-1">Roast</span>
+                <span className="text-base font-light text-dusty-rose ml-1">Roast</span>
               </div>
             </Link>
 
@@ -89,7 +89,7 @@ export default function Navbar() {
                     to={link.to}
                     className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                       active
-                        ? "text-coral"
+                        ? "text-dusty-rose"
                         : "text-foreground/70 hover:text-foreground hover:bg-foreground/5"
                     }`}
                   >
@@ -97,7 +97,7 @@ export default function Navbar() {
                     {active && (
                       <motion.div
                         layoutId="nav-indicator"
-                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-coral rounded-full"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-dusty-rose rounded-full"
                       />
                     )}
                   </Link>
@@ -131,7 +131,7 @@ export default function Navbar() {
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coral text-[10px] font-bold text-white px-1"
+                    className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-dusty-rose text-[10px] font-bold text-white px-1"
                   >
                     {count}
                   </motion.span>
@@ -140,7 +140,7 @@ export default function Navbar() {
 
               <Link
                 to="/menu"
-                className="hidden md:inline-flex items-center gap-1.5 bg-coral hover:bg-ember text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-coral/20"
+                className="hidden md:inline-flex items-center gap-1.5 bg-dusty-rose hover:bg-burgundy text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-dusty-rose/20"
               >
                 Order Now
               </Link>
@@ -173,7 +173,7 @@ export default function Navbar() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder='What are you craving today?'
-                    className="w-full rounded-xl border border-border bg-white/50 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20 transition-all"
+                    className="w-full rounded-xl border border-border bg-white/50 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-dusty-rose focus:ring-2 focus:ring-dusty-rose/20 transition-all"
                     autoFocus
                   />
                 </div>
@@ -205,7 +205,7 @@ export default function Navbar() {
                 <div>
                   <div className="text-[9px] text-muted-foreground tracking-[0.2em] uppercase">The</div>
                   <span className="text-base font-bold">BELGRAVIA</span>
-                  <span className="text-base font-light text-coral ml-1">Roast</span>
+                  <span className="text-base font-light text-dusty-rose ml-1">Roast</span>
                 </div>
                 <button onClick={() => setMobileOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted">
                   <X className="h-5 w-5" />
@@ -220,7 +220,7 @@ export default function Navbar() {
                       key={link.to}
                       to={link.to}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        active ? "bg-coral/10 text-coral" : "text-foreground/70 hover:bg-muted"
+                        active ? "bg-dusty-rose/10 text-dusty-rose" : "text-foreground/70 hover:bg-muted"
                       }`}
                     >
                       <Icon className="h-4.5 w-4.5" />
@@ -233,7 +233,7 @@ export default function Navbar() {
               <div className="p-4 border-t">
                 <Link
                   to="/menu"
-                  className="flex items-center justify-center w-full bg-coral text-white py-2.5 rounded-xl text-sm font-semibold"
+                  className="flex items-center justify-center w-full bg-dusty-rose text-white py-2.5 rounded-xl text-sm font-semibold"
                 >
                   Order Now
                 </Link>
@@ -257,18 +257,18 @@ export default function Navbar() {
                 className="relative flex flex-col items-center gap-0.5 px-3 py-1"
               >
                 <div className="relative">
-                  <Icon className={`h-5 w-5 transition-colors ${active ? "text-coral" : "text-foreground/50"}`} />
+                  <Icon className={`h-5 w-5 transition-colors ${active ? "text-dusty-rose" : "text-foreground/50"}`} />
                   {isCart && count > 0 && (
-                    <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral text-[9px] font-bold text-white px-1">
+                    <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-dusty-rose text-[9px] font-bold text-white px-1">
                       {count}
                     </span>
                   )}
                 </div>
-                <span className={`text-[10px] font-medium transition-colors ${active ? "text-coral" : "text-foreground/50"}`}>
+                <span className={`text-[10px] font-medium transition-colors ${active ? "text-dusty-rose" : "text-foreground/50"}`}>
                   {link.label}
                 </span>
                 {active && (
-                  <motion.div layoutId="bottom-nav" className="absolute -top-0.5 w-6 h-0.5 rounded-full bg-coral" />
+                  <motion.div layoutId="bottom-nav" className="absolute -top-0.5 w-6 h-0.5 rounded-full bg-dusty-rose" />
                 )}
               </Link>
             );

@@ -36,13 +36,13 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-rose">
                 <Coffee className="h-5 w-5 text-white" />
               </div>
               <div>
                 <div className="text-[9px] text-white/50 tracking-[0.2em] uppercase">The</div>
                 <span className="text-xl font-bold">BELGRAVIA</span>
-                <span className="text-xl font-light text-coral ml-1">Roast</span>
+                <span className="text-xl font-light text-dusty-rose ml-1">Roast</span>
               </div>
             </Link>
             <p className="text-white/50 text-sm leading-relaxed max-w-sm mb-6">
@@ -57,9 +57,9 @@ export default function Footer() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="flex-1 rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-sm placeholder:text-white/40 focus:outline-none focus:border-coral/50 transition-colors"
+                  className="flex-1 rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-sm placeholder:text-white/40 focus:outline-none focus:border-dusty-rose/50 transition-colors"
                 />
-                <button type="submit" className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral hover:bg-ember transition-colors shrink-0">
+                <button type="submit" className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-rose hover:bg-burgundy transition-colors shrink-0">
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </form>
@@ -72,7 +72,7 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link to={link.to} className="text-sm text-white/50 hover:text-coral transition-colors">{link.label}</Link>
+                    <Link to={link.to} className="text-sm text-white/50 hover:text-dusty-rose transition-colors">{link.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -94,7 +94,7 @@ export default function Footer() {
           </div>
           <div className="flex items-center gap-3">
             {[Instagram, Mail].map((Icon, i) => (
-              <a key={i} href="#" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-coral/20 text-white/50 hover:text-coral transition-all">
+              <a key={i} href="#" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-dusty-rose/20 text-white/50 hover:text-dusty-rose transition-all">
                 <Icon className="h-4 w-4" />
               </a>
             ))}

@@ -25,7 +25,7 @@ export default function ProductDetail() {
           <div className="text-center">
             <div className="text-5xl mb-4">🔍</div>
             <h2 className="text-xl font-bold text-foreground mb-2">Product not found</h2>
-            <Link to="/menu" className="text-caramel text-sm font-medium hover:underline">
+            <Link to="/menu" className="text-gold text-sm font-medium hover:underline">
               Back to Menu
             </Link>
           </div>
@@ -109,7 +109,7 @@ export default function ProductDetail() {
                   <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Non-Veg</span>
                 )}
                 {(product.badge === "bestseller" || product.bestSeller) && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-coral bg-coral/10 px-2 py-0.5 rounded-full">
+                  <span className="flex items-center gap-1 text-xs font-medium text-dusty-rose bg-dusty-rose/10 px-2 py-0.5 rounded-full">
                     <Star className="h-3 w-3 fill-current" /> Best Seller
                   </span>
                 )}
@@ -163,7 +163,7 @@ export default function ProductDetail() {
                         onClick={() => setSelectedSize(opt.name)}
                         className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
                           selectedSize === opt.name
-                            ? "border-caramel bg-caramel/10 text-caramel"
+                            ? "border-gold bg-gold/10 text-gold"
                             : "border-border text-foreground/70 hover:bg-muted"
                         }`}
                       >
@@ -186,7 +186,7 @@ export default function ProductDetail() {
                         onClick={() => setSelectedMilk(opt.name)}
                         className={`py-2 rounded-xl text-sm font-medium border transition-all ${
                           selectedMilk === opt.name
-                            ? "border-caramel bg-caramel/10 text-caramel"
+                            ? "border-gold bg-gold/10 text-gold"
                             : "border-border text-foreground/70 hover:bg-muted"
                         }`}
                       >
@@ -226,7 +226,7 @@ export default function ProductDetail() {
                         key={addOn.name}
                         className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
                           selectedAddOns.includes(addOn.name)
-                            ? "border-caramel bg-caramel/5"
+                            ? "border-gold bg-gold/5"
                             : "border-border hover:bg-muted/50"
                         }`}
                       >
@@ -235,7 +235,7 @@ export default function ProductDetail() {
                             type="checkbox"
                             checked={selectedAddOns.includes(addOn.name)}
                             onChange={() => toggleAddOn(addOn.name)}
-                            className="accent-caramel"
+                            className="accent-gold"
                           />
                           <span className="text-sm">{addOn.name}</span>
                         </div>
@@ -269,7 +269,7 @@ export default function ProductDetail() {
               {/* Add to Cart */}
               <button
                 onClick={handleAdd}
-                className="w-full flex items-center justify-center gap-2 bg-caramel hover:bg-caramel/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-caramel/20"
+                className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-gold/20"
               >
                 <ShoppingCart className="h-4 w-4" />
                 Add to Cart — ₹{totalPrice}

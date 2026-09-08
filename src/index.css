@@ -41,107 +41,106 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Belgravia brand tokens */
-  --color-espresso: var(--espresso);
-  --color-cream: var(--cream);
-  --color-caramel: var(--caramel);
-  --color-coral: var(--coral);
-  --color-ember: var(--ember);
+  /* Old money brand tokens */
+  --color-navy: var(--navy);
+  --color-gold: var(--gold);
+  --color-dusty-rose: var(--dusty-rose);
   --color-sage: var(--sage);
   --color-champagne: var(--champagne);
-  --color-latte: var(--latte);
-  --color-mocha: var(--mocha);
+  --color-cream: var(--cream);
+  --color-burgundy: var(--burgundy);
+  --color-warm-taupe: var(--warm-taupe);
 }
 
-/* === The Belgravia Roast Theme === */
+/* === The Belgravia Roast — Old Money Premium Theme === */
 :root {
   --radius: 0.75rem;
-  --background: #FFFBF7;
-  --foreground: #1A0F08;
-  --card: #FFFFFF;
-  --card-foreground: #1A0F08;
-  --popover: #FFFFFF;
-  --popover-foreground: #1A0F08;
-  --primary: #1A0F08;
-  --primary-foreground: #FFFBF7;
-  --secondary: #F5EDE4;
-  --secondary-foreground: #1A0F08;
-  --muted: #F0E8DD;
-  --muted-foreground: #7A6555;
-  --accent: #C85A1C;
-  --accent-foreground: #FFFFFF;
-  --destructive: #B91C1C;
-  --border: #E6DDD2;
-  --input: #E6DDD2;
-  --ring: #C85A1C;
-  --chart-1: #C85A1C;
-  --chart-2: #D4583A;
-  --chart-3: #2D7A4F;
-  --chart-4: #D4A574;
-  --chart-5: #8B6F47;
-  --sidebar: #1A0F08;
-  --sidebar-foreground: #FFFBF7;
-  --sidebar-primary: #C85A1C;
-  --sidebar-primary-foreground: #FFFBF7;
-  --sidebar-accent: #2A1A10;
-  --sidebar-accent-foreground: #FFFBF7;
-  --sidebar-border: #2A1A10;
-  --sidebar-ring: #C85A1C;
 
-  /* Extended brand palette */
-  --espresso: #1A0F08;
-  --cream: #FFFBF7;
-  --caramel: #C85A1C;
-  --coral: #D4583A;
-  --ember: #E8733A;
-  --sage: #2D7A4F;
-  --champagne: #F2E6D4;
-  --latte: #E8D5C0;
-  --mocha: #5C3A1E;
+  /* Core: warm ivory + deep navy */
+  --background: #FAF7F2;
+  --foreground: #1B2A3D;
+  --card: #FFFFFF;
+  --card-foreground: #1B2A3D;
+  --popover: #FFFFFF;
+  --popover-foreground: #1B2A3D;
+  --primary: #1B2A3D;
+  --primary-foreground: #FAF7F2;
+  --secondary: #F0E8DC;
+  --secondary-foreground: #1B2A3D;
+  --muted: #E8DFD2;
+  --muted-foreground: #7A7168;
+  --accent: #A8845C;
+  --accent-foreground: #FFFFFF;
+  --destructive: #8B4D4D;
+  --border: #DDD4C6;
+  --input: #DDD4C6;
+  --ring: #A8845C;
+  --chart-1: #A8845C;
+  --chart-2: #7A3B3E;
+  --chart-3: #6B7F6B;
+  --chart-4: #B8808A;
+  --chart-5: #8B7D6B;
+  --sidebar: #1B2A3D;
+  --sidebar-foreground: #FAF7F2;
+  --sidebar-primary: #A8845C;
+  --sidebar-primary-foreground: #FAF7F2;
+  --sidebar-accent: #243647;
+  --sidebar-accent-foreground: #FAF7F2;
+  --sidebar-border: #2A3D52;
+  --sidebar-ring: #A8845C;
+
+  /* Extended old money palette */
+  --navy: #1B2A3D;
+  --gold: #A8845C;
+  --dusty-rose: #B8808A;
+  --sage: #6B7F6B;
+  --champagne: #F0E8DC;
+  --cream: #FAF7F2;
+  --burgundy: #7A3B3E;
+  --warm-taupe: #8B7D6B;
 }
 
 .dark {
-  --background: #0F0A06;
-  --foreground: #F5EDE4;
-  --card: #1A120C;
-  --card-foreground: #F5EDE4;
-  --popover: #1A120C;
-  --popover-foreground: #F5EDE4;
-  --primary: #C85A1C;
-  --primary-foreground: #1A0F08;
-  --secondary: #2A1A10;
-  --secondary-foreground: #F5EDE4;
-  --muted: #2A1A10;
-  --muted-foreground: #A09080;
-  --accent: #E8733A;
-  --accent-foreground: #1A0F08;
-  --destructive: #EF4444;
-  --border: #2A1A10;
-  --input: #2A1A10;
-  --ring: #C85A1C;
-  --chart-1: #E8733A;
-  --chart-2: #D4583A;
-  --chart-3: #2D7A4F;
-  --chart-4: #D4A574;
-  --chart-5: #8B6F47;
-  --sidebar: #0F0A06;
-  --sidebar-foreground: #F5EDE4;
-  --sidebar-primary: #C85A1C;
-  --sidebar-primary-foreground: #1A0F08;
-  --sidebar-accent: #1A120C;
-  --sidebar-accent-foreground: #F5EDE4;
-  --sidebar-border: #1A120C;
-  --sidebar-ring: #C85A1C;
+  --background: #121820;
+  --foreground: #E8E2D8;
+  --card: #1A222C;
+  --card-foreground: #E8E2D8;
+  --popover: #1A222C;
+  --popover-foreground: #E8E2D8;
+  --primary: #A8845C;
+  --primary-foreground: #121820;
+  --secondary: #222C38;
+  --secondary-foreground: #E8E2D8;
+  --muted: #222C38;
+  --muted-foreground: #9A9488;
+  --accent: #C4A478;
+  --accent-foreground: #121820;
+  --destructive: #C47070;
+  --border: #2A3442;
+  --input: #2A3442;
+  --ring: #A8845C;
+  --chart-1: #C4A478;
+  --chart-2: #B07074;
+  --chart-3: #8FAA8F;
+  --chart-4: #D4A0AA;
+  --chart-5: #A89880;
+  --sidebar: #121820;
+  --sidebar-foreground: #E8E2D8;
+  --sidebar-primary: #A8845C;
+  --sidebar-primary-foreground: #121820;
+  --sidebar-accent: #1A222C;
+  --sidebar-accent-foreground: #E8E2D8;
+  --sidebar-border: #1A222C;
+  --sidebar-ring: #A8845C;
 
-  --espresso: #F5EDE4;
-  --cream: #0F0A06;
-  --caramel: #E8733A;
-  --coral: #D4583A;
-  --ember: #C85A1C;
-  --sage: #3D9A6A;
-  --champagne: #2A1A10;
-  --latte: #3D2A1A;
-  --mocha: #A08060;
+  --navy: #E8E2D8;
+  --gold: #C4A478;
+  --dusty-rose: #D4A0AA;
+  --sage: #8FAA8F;
+  --champagne: #2A3442;
+  --cream: #121820;
+  --burgundy: #B07074;
+  --warm-taupe: #A89880;
 }
 
 @layer base {
@@ -160,42 +159,42 @@
 
 /* === Brand Utilities === */
 @layer utilities {
-  /* Brand text gradient: warm caramel-to-coral */
+  /* Brand text gradient: gold-to-dusty-rose */
   .text-gradient-brand {
-    background: linear-gradient(135deg, #C85A1C 0%, #D4583A 50%, #E8733A 100%);
+    background: linear-gradient(135deg, #A8845C 0%, #B8808A 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Dark hero background */
+  /* Dark hero background: deep navy */
   .bg-hero-dark {
-    background: linear-gradient(135deg, #1A0F08 0%, #2A1A10 25%, #3C2214 50%, #2A1A10 75%, #1A0F08 100%);
+    background: linear-gradient(135deg, #0E1620 0%, #1B2A3D 30%, #243647 60%, #1B2A3D 90%, #0E1620 100%);
   }
 
   /* Brand accent gradients */
   .bg-brand-gradient {
-    background: linear-gradient(135deg, #C85A1C 0%, #D4583A 50%, #E8733A 100%);
+    background: linear-gradient(135deg, #A8845C 0%, #B8808A 100%);
   }
   .bg-warm-gradient {
-    background: linear-gradient(180deg, #FFFBF7 0%, #F5EDE4 50%, #E8D5C0 100%);
+    background: linear-gradient(180deg, #FAF7F2 0%, #F0E8DC 50%, #E8DFD2 100%);
   }
   .bg-cafe-gradient {
-    background: linear-gradient(135deg, #1A0F08 0%, #3C2214 50%, #5C3A1E 100%);
+    background: linear-gradient(135deg, #1B2A3D 0%, #243647 50%, #2A3D52 100%);
   }
 
   /* Glass effects */
   .glass {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(255, 251, 247, 0.78);
-    border: 1px solid rgba(230, 221, 210, 0.5);
+    background: rgba(250, 247, 242, 0.78);
+    border: 1px solid rgba(221, 212, 198, 0.5);
   }
   .glass-dark {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(26, 15, 8, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(18, 24, 32, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   /* Noise texture overlay */
@@ -206,7 +205,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    opacity: 0.03;
+    opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 1;
@@ -239,7 +238,7 @@
 
   /* Smooth magnetic hover for CTAs */
   .btn-brand {
-    background: linear-gradient(135deg, #C85A1C, #D4583A);
+    background: linear-gradient(135deg, #A8845C, #B8808A);
     color: white;
     padding: 0.875rem 2rem;
     border-radius: 0.875rem;
@@ -247,11 +246,11 @@
     font-size: 0.875rem;
     letter-spacing: 0.02em;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 15px rgba(200, 90, 28, 0.3);
+    box-shadow: 0 4px 15px rgba(168, 132, 92, 0.25);
   }
   .btn-brand:hover {
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(200, 90, 28, 0.4);
+    box-shadow: 0 8px 25px rgba(168, 132, 92, 0.35);
   }
   .btn-brand:active {
     transform: translateY(0) scale(0.98);
@@ -319,7 +318,7 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--caramel);
+  background: var(--gold);
 }
 
 html {

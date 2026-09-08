@@ -26,7 +26,7 @@ export default function CartPage() {
               <p className="text-sm text-muted-foreground mb-6">Add something delicious to get started</p>
               <Link
                 to="/menu"
-                className="inline-flex items-center gap-2 bg-caramel text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-caramel/90 transition-all"
+                className="inline-flex items-center gap-2 bg-gold text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
               >
                 Browse Menu <ArrowRight className="h-4 w-4" />
               </Link>
@@ -118,14 +118,14 @@ export default function CartPage() {
                   </div>
                   <Link
                     to="/checkout"
-                    className="mt-6 w-full flex items-center justify-center gap-2 bg-caramel hover:bg-caramel/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+                    className="mt-6 w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
                   >
                     Proceed to Checkout
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     to="/menu"
-                    className="mt-3 w-full flex items-center justify-center text-sm text-caramel font-medium hover:underline"
+                    className="mt-3 w-full flex items-center justify-center text-sm text-gold font-medium hover:underline"
                   >
                     Continue Shopping
                   </Link>

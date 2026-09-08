@@ -56,8 +56,8 @@ function FloatingBean({ className, delay = 0 }: { className?: string; delay?: nu
       transition={{ duration: 7, delay, repeat: Infinity, ease: "easeInOut" }}
     >
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="14" cy="14" rx="10" ry="13" fill="#5C3A1E" opacity="0.6" transform="rotate(-20 14 14)" />
-        <path d="M14 2C14 2 11 10 11 14C11 18 14 26 14 26" stroke="#3C1A0B" strokeWidth="1.2" opacity="0.4" fill="none" />
+        <ellipse cx="14" cy="14" rx="10" ry="13" fill="#8B7D6B" opacity="0.6" transform="rotate(-20 14 14)" />
+        <path d="M14 2C14 2 11 10 11 14C11 18 14 26 14 26" stroke="#1B2A3D" strokeWidth="1.2" opacity="0.4" fill="none" />
       </svg>
     </motion.div>
   );
@@ -87,7 +87,7 @@ function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           {item.badge && (
             <div className={`absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${
-              item.badge === "signature" ? "bg-coral text-white" :
+              item.badge === "signature" ? "bg-dusty-rose text-white" :
               item.badge === "bestseller" ? "bg-amber-500 text-white" :
               item.badge === "spicy" ? "bg-red-500 text-white" :
               item.badge === "new" ? "bg-sage text-white" :
@@ -113,13 +113,13 @@ function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[
             <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
             <span className="text-xs font-medium text-muted-foreground">{item.rating}</span>
           </div>
-          <h3 className="font-semibold text-sm text-foreground group-hover:text-coral transition-colors">{item.name}</h3>
+          <h3 className="font-semibold text-sm text-foreground group-hover:text-dusty-rose transition-colors">{item.name}</h3>
           <p className="text-xs text-muted-foreground line-clamp-2 mt-1 mb-3">{item.description}</p>
           <div className="flex items-center justify-between">
             <span className="text-lg font-bold text-foreground">₹{item.price}</span>
             <button
               onClick={handleAdd}
-              className="h-8 w-8 rounded-xl bg-coral text-white flex items-center justify-center text-lg font-bold hover:bg-ember transition-all hover:shadow-md hover:shadow-coral/20"
+              className="h-8 w-8 rounded-xl bg-dusty-rose text-white flex items-center justify-center text-lg font-bold hover:bg-burgundy transition-all hover:shadow-md hover:shadow-dusty-rose/20"
             >
               +
             </button>
@@ -198,9 +198,9 @@ export default function Landing() {
                   transition={{ duration: 1.6, delay: 0.8, times: [0, 0.3, 0.5, 0.7, 1] }}
                 >
                   <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 40h70v45c0 11-9 20-20 20H40c-11 0-20-9-20-20V40z" fill="#C85A1C" opacity="0.9" />
-                    <ellipse cx="55" cy="40" rx="35" ry="6" fill="#E8733A" />
-                    <path d="M90 50h10c8 0 15 7 15 15s-7 15-15 15H90" stroke="#C85A1C" strokeWidth="4" fill="none" />
+                    <path d="M20 40h70v45c0 11-9 20-20 20H40c-11 0-20-9-20-20V40z" fill="#A8845C" opacity="0.9" />
+                    <ellipse cx="55" cy="40" rx="35" ry="6" fill="#B8808A" />
+                    <path d="M90 50h10c8 0 15 7 15 15s-7 15-15 15H90" stroke="#A8845C" strokeWidth="4" fill="none" />
                   </svg>
                   {/* Steam wisps from cup */}
                   <div className="absolute -top-8 left-8">
@@ -218,7 +218,7 @@ export default function Landing() {
                 transition={{ duration: 1.2, delay: 1.6, ease: "easeOut" as const }}
                 className="absolute"
               >
-                <div className="w-64 h-64 rounded-full bg-coral/30 blur-2xl" />
+                <div className="w-64 h-64 rounded-full bg-dusty-rose/30 blur-2xl" />
               </motion.div>
 
               {/* Brand reveal */}
@@ -232,7 +232,7 @@ export default function Landing() {
                 <div className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
                   <div className="text-white/80 text-2xl sm:text-3xl tracking-[0.4em] uppercase mb-1">The</div>
                   <div>BELGRAVIA</div>
-                  <div className="text-gradient-brand" style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #C85A1C, #E8733A)", WebkitBackgroundClip: "text", backgroundClip: "text" }}>ROAST</div>
+                  <div className="text-gradient-brand" style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #A8845C, #B8808A)", WebkitBackgroundClip: "text", backgroundClip: "text" }}>ROAST</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -253,7 +253,7 @@ export default function Landing() {
               <h1 className="font-display leading-[0.95] mb-4">
                 <span className="block text-white/70 text-3xl sm:text-4xl lg:text-5xl tracking-[0.2em] uppercase">The</span>
                 <span className="block text-white text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight">BELGRAVIA</span>
-                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight" style={{ background: "linear-gradient(135deg, #C85A1C, #E8733A, #D4583A)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ROAST</span>
+                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight" style={{ background: "linear-gradient(135deg, #A8845C, #B8808A, #C4A478)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>ROAST</span>
               </h1>
             </motion.div>
 
@@ -337,9 +337,9 @@ export default function Landing() {
         <section className="py-16 sm:py-20 bg-gradient-to-b from-background via-champagne/30 to-background">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-10">
-              <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-coral/10 rounded-full px-4 py-1.5 mb-3">
-                <Sparkles className="h-3.5 w-3.5 text-coral" />
-                <span className="text-xs font-semibold text-coral uppercase tracking-wider">Only at Belgravia</span>
+              <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-dusty-rose/10 rounded-full px-4 py-1.5 mb-3">
+                <Sparkles className="h-3.5 w-3.5 text-dusty-rose" />
+                <span className="text-xs font-semibold text-dusty-rose uppercase tracking-wider">Only at Belgravia</span>
               </motion.div>
               <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold text-foreground">Signature Creations</motion.h2>
               <motion.p variants={fadeUp} custom={2} className="text-muted-foreground mt-2">Drinks you won't find anywhere else</motion.p>
@@ -376,7 +376,7 @@ export default function Landing() {
             ))}
           </div>
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mt-8">
-            <Link to="/menu" className="inline-flex items-center gap-2 text-sm font-semibold text-coral hover:text-ember transition-colors">
+            <Link to="/menu" className="inline-flex items-center gap-2 text-sm font-semibold text-dusty-rose hover:text-burgundy transition-colors">
               View Full Menu <ChevronRight className="h-4 w-4" />
             </Link>
           </motion.div>
@@ -387,9 +387,9 @@ export default function Landing() {
       <section className="py-16 sm:py-20 bg-warm-gradient">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-10">
-            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-coral/10 rounded-full px-4 py-1.5 mb-3">
-              <Coffee className="h-3.5 w-3.5 text-coral" />
-              <span className="text-xs font-semibold text-coral uppercase tracking-wider">Trending Now</span>
+            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-dusty-rose/10 rounded-full px-4 py-1.5 mb-3">
+              <Coffee className="h-3.5 w-3.5 text-dusty-rose" />
+              <span className="text-xs font-semibold text-dusty-rose uppercase tracking-wider">Trending Now</span>
             </motion.div>
             <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold text-foreground">Most Loved This Week</motion.h2>
           </motion.div>
@@ -415,7 +415,7 @@ export default function Landing() {
               const Icon = f.icon;
               return (
                 <motion.div key={f.title} variants={fadeUp} custom={i} className="bg-white rounded-2xl p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300 text-center group">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-coral/10 text-coral group-hover:bg-coral group-hover:text-white transition-colors duration-300">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-dusty-rose/10 text-dusty-rose group-hover:bg-dusty-rose group-hover:text-white transition-colors duration-300">
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="font-semibold text-foreground mb-2">{f.title}</h3>
@@ -432,8 +432,8 @@ export default function Landing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <div className="inline-flex items-center gap-2 bg-coral/10 rounded-full px-4 py-1.5 mb-4">
-                <span className="text-xs font-semibold text-coral uppercase tracking-wider">Our Story</span>
+              <div className="inline-flex items-center gap-2 bg-dusty-rose/10 rounded-full px-4 py-1.5 mb-4">
+                <span className="text-xs font-semibold text-dusty-rose uppercase tracking-wider">Our Story</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">A Better Cup.<br />A Better Moment.</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
@@ -442,7 +442,7 @@ export default function Landing() {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 We source single-origin beans from ethical farms, roast them to highlight each origin's unique character, and serve them with genuine care. It's a simple philosophy executed with precision.
               </p>
-              <Link to="/about" className="inline-flex items-center gap-2 text-sm font-semibold text-coral hover:text-ember transition-colors">
+              <Link to="/about" className="inline-flex items-center gap-2 text-sm font-semibold text-dusty-rose hover:text-burgundy transition-colors">
                 Read Our Full Story <ChevronRight className="h-4 w-4" />
               </Link>
             </motion.div>
@@ -456,7 +456,7 @@ export default function Landing() {
 
       {/* ══════════ REVIEWS ══════════ */}
       <section className="py-16 sm:py-20 bg-cafe-gradient text-white relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-coral/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-dusty-rose/10 rounded-full blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-12">
             <motion.h2 variants={fadeUp} custom={0} className="text-3xl sm:text-4xl font-bold">What Our Guests Say</motion.h2>
@@ -465,12 +465,12 @@ export default function Landing() {
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {reviews.map((r, i) => (
               <motion.div key={i} variants={fadeUp} custom={i} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <Quote className="h-8 w-8 text-coral/40 mb-4" />
+                <Quote className="h-8 w-8 text-dusty-rose/40 mb-4" />
                 <p className="text-white/60 text-sm leading-relaxed mb-6">{r.text}</p>
                 <div className="flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {Array.from({ length: r.rating }).map((_, j) => (
-                      <Star key={j} className="h-3 w-3 fill-coral text-coral" />
+                      <Star key={j} className="h-3 w-3 fill-dusty-rose text-dusty-rose" />
                     ))}
                   </div>
                   <span className="text-xs text-white/40">{r.name}</span>

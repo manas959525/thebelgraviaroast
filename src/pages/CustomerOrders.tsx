@@ -35,7 +35,7 @@ export default function CustomerOrders() {
               <ShoppingBag className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">No orders yet</h2>
               <p className="text-sm text-muted-foreground mb-6">Place your first order to see it here.</p>
-              <Link to="/menu" className="inline-flex items-center gap-2 bg-caramel text-white px-6 py-3 rounded-xl text-sm font-semibold">
+              <Link to="/menu" className="inline-flex items-center gap-2 bg-gold text-white px-6 py-3 rounded-xl text-sm font-semibold">
                 Browse Menu
               </Link>
             </div>
@@ -66,7 +66,7 @@ export default function CustomerOrders() {
                       <span className="font-bold text-foreground">₹{order.total}</span>
                       <Link
                         to="/track-order"
-                        className="flex items-center gap-1 text-xs text-caramel font-medium hover:underline"
+                        className="flex items-center gap-1 text-xs text-gold font-medium hover:underline"
                       >
                         Track <ChevronRight className="h-3 w-3" />
                       </Link>

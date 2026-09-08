@@ -123,7 +123,7 @@ export default function About() {
                   viewport={{ once: true }}
                   className="bg-white rounded-2xl p-6 border border-border/50 shadow-sm"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-caramel/10 text-caramel">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/10 text-gold">
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="font-semibold text-foreground mb-2">{v.title}</h3>
@@ -158,13 +158,13 @@ export default function About() {
                 className="flex gap-6"
               >
                 <div className="flex flex-col items-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-caramel text-white font-bold text-sm shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-white font-bold text-sm shrink-0">
                     {item.year.slice(2)}
                   </div>
                   {i < timeline.length - 1 && <div className="w-0.5 flex-1 bg-border my-2" />}
                 </div>
                 <div className="pb-8">
-                  <div className="text-xs font-semibold text-caramel uppercase tracking-wider mb-1">{item.year}</div>
+                  <div className="text-xs font-semibold text-gold uppercase tracking-wider mb-1">{item.year}</div>
                   <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>
@@ -182,7 +182,7 @@ export default function About() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <Users className="h-12 w-12 text-caramel mx-auto mb-4" />
+            <Users className="h-12 w-12 text-gold mx-auto mb-4" />
             <h2 className="text-3xl font-bold mb-4">The People Behind the Roast</h2>
             <p className="text-white/60 max-w-xl mx-auto leading-relaxed">
               A small, dedicated team of coffee lovers, chefs, and hospitality professionals who

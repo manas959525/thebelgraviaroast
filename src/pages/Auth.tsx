@@ -106,7 +106,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       <div className="hidden lg:flex lg:w-1/2 bg-cafe-gradient relative overflow-hidden items-center justify-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,rgba(196,106,43,0.2),transparent_60%)]" />
         <div className="relative text-center px-12">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-caramel/20 text-caramel mx-auto mb-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/20 text-gold mx-auto mb-6">
             <Coffee className="h-8 w-8" />
           </div>
           <h2 className="text-3xl font-bold text-white mb-3">The Belgravia Roast</h2>
@@ -121,11 +121,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-2.5 mb-8 justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-caramel text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold text-white">
               <Coffee className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold text-foreground">
-              The Belgravia <span className="text-caramel">Roast</span>
+              The Belgravia <span className="text-gold">Roast</span>
             </span>
           </div>
 
@@ -242,7 +242,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   <CardFooter className="flex-col gap-2">
                     <Button
                       type="submit"
-                      className="w-full bg-caramel hover:bg-caramel/90"
+                      className="w-full bg-gold hover:bg-gold/90"
                       disabled={isLoading || otp.length !== 6}
                     >
                       {isLoading ? (

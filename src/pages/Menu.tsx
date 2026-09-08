@@ -62,7 +62,7 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                     <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                   </div>
                 )}
-                <h3 className="font-semibold text-sm text-foreground group-hover:text-caramel transition-colors truncate">
+                <h3 className="font-semibold text-sm text-foreground group-hover:text-gold transition-colors truncate">
                   {product.name}
                 </h3>
               </div>
@@ -70,7 +70,7 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                 {product.description}
               </p>
             </div>              {(product.badge === "bestseller" || product.bestSeller) && (
-                  <span className="shrink-0 flex items-center gap-1 bg-coral/10 text-coral text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="shrink-0 flex items-center gap-1 bg-dusty-rose/10 text-dusty-rose text-[10px] font-bold px-2 py-0.5 rounded-full">
                     <Star className="h-2.5 w-2.5 fill-current" />
                     Best Seller
                   </span>
@@ -90,7 +90,7 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
               {product.calories && <span className="text-[10px] text-muted-foreground">{product.calories} cal</span>}
               <button
                 onClick={handleAdd}
-                className="h-8 w-8 rounded-xl bg-caramel text-white flex items-center justify-center text-lg font-bold hover:bg-caramel/90 transition-all hover:shadow-md shrink-0"
+                className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all hover:shadow-md shrink-0"
               >
                 +
               </button>
@@ -171,7 +171,7 @@ export default function MenuPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search dishes, ingredients..."
-              className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20"
+              className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
             />
           </div>
           <button
@@ -192,7 +192,7 @@ export default function MenuPage() {
           <button
             onClick={() => handleCategoryClick(null)}
             className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              !selectedCategory ? "bg-caramel text-white shadow-md shadow-caramel/20" : "bg-white border border-border text-foreground/70 hover:bg-muted"
+              !selectedCategory ? "bg-gold text-white shadow-md shadow-gold/20" : "bg-white border border-border text-foreground/70 hover:bg-muted"
             }`}
           >
             All
@@ -203,7 +203,7 @@ export default function MenuPage() {
               onClick={() => handleCategoryClick(cat.slug)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
                 selectedCategory === cat.slug
-                  ? "bg-caramel text-white shadow-md shadow-caramel/20"
+                  ? "bg-gold text-white shadow-md shadow-gold/20"
                   : "bg-white border border-border text-foreground/70 hover:bg-muted"
               }`}
             >

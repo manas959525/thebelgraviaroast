@@ -45,7 +45,7 @@ export default function TableOrdering() {
           {/* Step: Scan / Enter Table */}
           {step === "scan" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto text-center py-16">
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-caramel/10 text-caramel">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gold/10 text-gold">
                 <QrCode className="h-10 w-10" />
               </div>
               <h1 className="text-3xl font-bold text-foreground mb-3">Table Ordering</h1>
@@ -59,13 +59,13 @@ export default function TableOrdering() {
                   value={tableNum}
                   onChange={(e) => setTableNum(e.target.value)}
                   placeholder="e.g. 7"
-                  className="w-full rounded-xl border border-border px-4 py-3 text-center text-2xl font-bold outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-center text-2xl font-bold outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                 />
               </div>
               <button
                 onClick={handleStart}
                 disabled={!tableNum.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-caramel hover:bg-caramel/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50"
               >
                 <Coffee className="h-4 w-4" />
                 Start Ordering
@@ -84,7 +84,7 @@ export default function TableOrdering() {
                 {totalItems > 0 && (
                   <button
                     onClick={() => setStep("cart")}
-                    className="flex items-center gap-2 bg-caramel text-white px-4 py-2.5 rounded-xl text-sm font-semibold"
+                    className="flex items-center gap-2 bg-gold text-white px-4 py-2.5 rounded-xl text-sm font-semibold"
                   >
                     <ShoppingCart className="h-4 w-4" />
                     {totalItems} items · ₹{totalPrice}
@@ -97,7 +97,7 @@ export default function TableOrdering() {
                 <button
                   onClick={() => setSelectedCat(null)}
                   className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    !selectedCat ? "bg-caramel text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                    !selectedCat ? "bg-gold text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
                   }`}
                 >
                   All
@@ -107,7 +107,7 @@ export default function TableOrdering() {
                     key={cat.id}
                     onClick={() => setSelectedCat(cat.slug)}
                     className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1 ${
-                      selectedCat === cat.slug ? "bg-caramel text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                      selectedCat === cat.slug ? "bg-gold text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
                     }`}
                   >
                     {cat.emoji} {cat.name}
@@ -138,7 +138,7 @@ export default function TableOrdering() {
                         <span className="font-bold text-foreground">₹{product.discountPrice ?? product.price}</span>
                         <button
                           onClick={() => handleAdd(product)}
-                          className="h-8 w-8 rounded-xl bg-caramel text-white flex items-center justify-center text-lg font-bold hover:bg-caramel/90 transition-all"
+                          className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all"
                         >
                           +
                         </button>
@@ -181,7 +181,7 @@ export default function TableOrdering() {
                 </button>
                 <Link
                   to="/checkout"
-                  className="flex-1 flex items-center justify-center gap-2 bg-caramel text-white py-3 rounded-xl text-sm font-semibold hover:bg-caramel/90 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 bg-gold text-white py-3 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
                 >
                   <Check className="h-4 w-4" /> Place Order
                 </Link>

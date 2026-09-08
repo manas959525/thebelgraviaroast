@@ -117,11 +117,11 @@ export default function PaymentPage() {
                 onClick={() => setMethod(value)}
                 disabled={paymentStatus !== "idle"}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
-                  method === value ? "border-coral bg-coral/5" : "border-border hover:bg-muted/50"
+                  method === value ? "border-dusty-rose bg-dusty-rose/5" : "border-border hover:bg-muted/50"
                 } ${paymentStatus !== "idle" ? "opacity-60" : ""}`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                  method === value ? "bg-coral text-white" : "bg-muted text-muted-foreground"
+                  method === value ? "bg-dusty-rose text-white" : "bg-muted text-muted-foreground"
                 }`}>
                   <Icon className="h-5 w-5" />
                 </div>
@@ -129,7 +129,7 @@ export default function PaymentPage() {
                   <div className="text-sm font-medium">{label}</div>
                   <div className="text-xs text-muted-foreground">{desc}</div>
                 </div>
-                {method === value && <Check className="h-5 w-5 text-coral" />}
+                {method === value && <Check className="h-5 w-5 text-dusty-rose" />}
               </button>
             ))}
           </div>
@@ -201,7 +201,7 @@ export default function PaymentPage() {
                 <>
                   <button
                     onClick={handleInitiatePayment}
-                    className="w-full flex items-center justify-center gap-2 bg-coral hover:bg-ember text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-coral/20"
+                    className="w-full flex items-center justify-center gap-2 bg-dusty-rose hover:bg-burgundy text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-dusty-rose/20"
                   >
                     <ExternalLink className="h-4 w-4" />
                     Open UPI App
@@ -217,7 +217,7 @@ export default function PaymentPage() {
               {paymentStatus === "initiated" && (
                 <button
                   onClick={handlePaymentCompleted}
-                  className="w-full flex items-center justify-center gap-2 bg-coral hover:bg-ember text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+                  className="w-full flex items-center justify-center gap-2 bg-dusty-rose hover:bg-burgundy text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
                 >
                   <Check className="h-4 w-4" />
                   I Have Completed Payment
@@ -225,7 +225,7 @@ export default function PaymentPage() {
               )}
               {paymentStatus === "verification_pending" && (
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-3">
-                  <div className="h-4 w-4 border-2 border-coral/30 border-t-coral rounded-full animate-spin" />
+                  <div className="h-4 w-4 border-2 border-dusty-rose/30 border-t-dusty-rose rounded-full animate-spin" />
                   Verifying...
                 </div>
               )}
@@ -244,24 +244,24 @@ export default function PaymentPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Card Number</label>
-                  <input type="text" placeholder="1234 5678 9012 3456" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20" />
+                  <input type="text" placeholder="1234 5678 9012 3456" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-dusty-rose focus:ring-2 focus:ring-dusty-rose/20" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Expiry</label>
-                    <input type="text" placeholder="MM/YY" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20" />
+                    <input type="text" placeholder="MM/YY" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-dusty-rose focus:ring-2 focus:ring-dusty-rose/20" />
                   </div>
                   <div>
                     <label className="text-sm font-medium">CVV</label>
-                    <input type="password" placeholder="123" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20" />
+                    <input type="password" placeholder="123" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-dusty-rose focus:ring-2 focus:ring-dusty-rose/20" />
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Name on Card</label>
-                  <input type="text" placeholder="Your name" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20" />
+                  <input type="text" placeholder="Your name" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-dusty-rose focus:ring-2 focus:ring-dusty-rose/20" />
                 </div>
               </div>
-              <button onClick={handlePaymentCompleted} disabled={paymentStatus !== "idle"} className="mt-6 w-full flex items-center justify-center gap-2 bg-coral hover:bg-ember text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
+              <button onClick={handlePaymentCompleted} disabled={paymentStatus !== "idle"} className="mt-6 w-full flex items-center justify-center gap-2 bg-dusty-rose hover:bg-burgundy text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
                 {paymentStatus !== "idle" ? (
                   <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
                 ) : `Pay ₹${total}`}
@@ -272,10 +272,10 @@ export default function PaymentPage() {
           {/* ═══ CASH ═══ */}
           {method === "cash" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-border/50 p-6 text-center mb-8">
-              <Building2 className="h-10 w-10 text-coral mx-auto mb-3" />
+              <Building2 className="h-10 w-10 text-dusty-rose mx-auto mb-3" />
               <h3 className="font-semibold mb-1">Pay at the Counter</h3>
               <p className="text-sm text-muted-foreground mb-6">Settle your bill at the register when you collect or finish your order.</p>
-              <button onClick={handleCashOrder} disabled={paymentStatus !== "idle"} className="w-full flex items-center justify-center gap-2 bg-coral hover:bg-ember text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
+              <button onClick={handleCashOrder} disabled={paymentStatus !== "idle"} className="w-full flex items-center justify-center gap-2 bg-dusty-rose hover:bg-burgundy text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
                 {paymentStatus !== "idle" ? (
                   <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
                 ) : "Confirm Order"}

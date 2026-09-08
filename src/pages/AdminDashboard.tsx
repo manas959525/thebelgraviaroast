@@ -60,7 +60,7 @@ const statusColors = {
 function DashboardView() {
   const stats = [
     { label: "Today's Revenue", value: "₹24,580", change: "+12%", icon: DollarSign, color: "text-sage" },
-    { label: "Orders Today", value: "89", change: "+8%", icon: ShoppingBag, color: "text-caramel" },
+    { label: "Orders Today", value: "89", change: "+8%", icon: ShoppingBag, color: "text-gold" },
     { label: "Avg. Order Value", value: "₹276", change: "+5%", icon: TrendingUp, color: "text-blue-500" },
     { label: "Active Tables", value: "7/15", change: "", icon: Calendar, color: "text-purple-500" },
   ];
@@ -99,7 +99,7 @@ function DashboardView() {
       <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b">
           <h3 className="font-semibold text-foreground">Recent Orders</h3>
-          <button className="text-xs text-caramel font-medium hover:underline">View All</button>
+          <button className="text-xs text-gold font-medium hover:underline">View All</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -148,13 +148,13 @@ function ProductsView() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input type="text" placeholder="Search products..." className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-caramel w-56" />
+            <input type="text" placeholder="Search products..." className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-gold w-56" />
           </div>
           <div className="flex border border-border rounded-lg overflow-hidden">
-            <button onClick={() => setView("grid")} className={`p-2 ${view === "grid" ? "bg-caramel text-white" : "bg-white"}`}><Grid3X3 className="h-4 w-4" /></button>
-            <button onClick={() => setView("list")} className={`p-2 ${view === "list" ? "bg-caramel text-white" : "bg-white"}`}><List className="h-4 w-4" /></button>
+            <button onClick={() => setView("grid")} className={`p-2 ${view === "grid" ? "bg-gold text-white" : "bg-white"}`}><Grid3X3 className="h-4 w-4" /></button>
+            <button onClick={() => setView("list")} className={`p-2 ${view === "list" ? "bg-gold text-white" : "bg-white"}`}><List className="h-4 w-4" /></button>
           </div>
-          <button className="flex items-center gap-2 bg-caramel text-white px-4 py-2 rounded-xl text-sm font-semibold">
+          <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
             <Plus className="h-4 w-4" /> Add Product
           </button>
         </div>
@@ -238,7 +238,7 @@ function CategoriesView() {
           <h2 className="text-2xl font-bold text-foreground">Categories</h2>
           <p className="text-sm text-muted-foreground">{categories.length} categories</p>
         </div>
-        <button className="flex items-center gap-2 bg-caramel text-white px-4 py-2 rounded-xl text-sm font-semibold">
+        <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
           <Plus className="h-4 w-4" /> Add Category
         </button>
       </div>
@@ -283,7 +283,7 @@ function OrdersView() {
             key={f}
             onClick={() => setFilter(f)}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-              filter === f ? "bg-caramel text-white" : "bg-white border border-border text-muted-foreground hover:bg-muted"
+              filter === f ? "bg-gold text-white" : "bg-white border border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {f}
@@ -360,7 +360,7 @@ function TablesView() {
           <h2 className="text-2xl font-bold text-foreground">Tables</h2>
           <p className="text-sm text-muted-foreground">{tables.filter((t) => t.status === "available").length} available · {tables.filter((t) => t.status === "occupied").length} occupied</p>
         </div>
-        <button className="flex items-center gap-2 bg-caramel text-white px-4 py-2 rounded-xl text-sm font-semibold">
+        <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
           <Plus className="h-4 w-4" /> Add Table
         </button>
       </div>
@@ -391,7 +391,7 @@ function QRGeneratorView() {
             </div>
             <h4 className="font-semibold">Table #{i + 1}</h4>
             <p className="text-xs text-muted-foreground mb-3">belgraviaroast.in/table/{i + 1}</p>
-            <button className="text-xs text-caramel font-medium hover:underline">Download QR</button>
+            <button className="text-xs text-gold font-medium hover:underline">Download QR</button>
           </div>
         ))}
       </div>
@@ -411,7 +411,7 @@ function OffersView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Offers & Coupons</h2>
-        <button className="flex items-center gap-2 bg-caramel text-white px-4 py-2 rounded-xl text-sm font-semibold">
+        <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
           <Plus className="h-4 w-4" /> Create Offer
         </button>
       </div>
@@ -512,24 +512,24 @@ function SettingsView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Café Name</label>
-              <input defaultValue="The Belgravia Roast" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel" />
+              <input defaultValue="The Belgravia Roast" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
             </div>
             <div>
               <label className="text-sm font-medium">Phone</label>
-              <input defaultValue="+91 98765 43210" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel" />
+              <input defaultValue="+91 98765 43210" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
             </div>
             <div>
               <label className="text-sm font-medium">Email</label>
-              <input defaultValue="hello@thebelgraviaroast.in" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel" />
+              <input defaultValue="hello@thebelgraviaroast.in" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
             </div>
             <div>
               <label className="text-sm font-medium">Address</label>
-              <input defaultValue="42 Belgravia Lane, New Delhi 110001" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel" />
+              <input defaultValue="42 Belgravia Lane, New Delhi 110001" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
             </div>
           </div>
         </div>
         <div className="flex justify-end">
-          <button className="bg-caramel text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-caramel/90 transition-all">
+          <button className="bg-gold text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all">
             Save Changes
           </button>
         </div>
@@ -580,7 +580,7 @@ export default function AdminDashboardPage() {
         {/* Sidebar */}
         <aside className={`fixed lg:sticky top-0 left-0 bottom-0 z-20 w-64 bg-white border-r border-border flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <div className="p-5 border-b">
-            <div className="font-bold text-foreground">The Belgravia <span className="text-caramel">Roast</span></div>
+            <div className="font-bold text-foreground">The Belgravia <span className="text-gold">Roast</span></div>
             <div className="text-xs text-muted-foreground mt-0.5">Admin Panel</div>
           </div>
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
@@ -591,7 +591,7 @@ export default function AdminDashboardPage() {
                   key={item.id}
                   onClick={() => { setSection(item.id); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    section === item.id ? "bg-caramel/10 text-caramel" : "text-foreground/60 hover:bg-muted"
+                    section === item.id ? "bg-gold/10 text-gold" : "text-foreground/60 hover:bg-muted"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -602,7 +602,7 @@ export default function AdminDashboardPage() {
           </nav>
           <div className="p-3 border-t">
             <div className="flex items-center gap-3 px-3 py-2">
-              <div className="h-8 w-8 rounded-full bg-caramel/10 flex items-center justify-center text-caramel text-sm font-bold">
+              <div className="h-8 w-8 rounded-full bg-gold/10 flex items-center justify-center text-gold text-sm font-bold">
                 {user?.name?.[0] || "A"}
               </div>
               <div className="flex-1 min-w-0">

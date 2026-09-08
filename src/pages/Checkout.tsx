@@ -28,7 +28,7 @@ export default function CheckoutPage() {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-foreground mb-2">Your cart is empty</h2>
-            <Link to="/menu" className="text-caramel text-sm font-medium hover:underline">Browse Menu</Link>
+            <Link to="/menu" className="text-gold text-sm font-medium hover:underline">Browse Menu</Link>
           </div>
         </div>
         <Footer />
@@ -66,11 +66,11 @@ export default function CheckoutPage() {
                       onClick={() => setOrderType(value)}
                       className={`p-4 rounded-xl border text-center transition-all ${
                         orderType === value
-                          ? "border-caramel bg-caramel/5"
+                          ? "border-gold bg-gold/5"
                           : "border-border hover:bg-muted/50"
                       }`}
                     >
-                      <Icon className={`h-5 w-5 mx-auto mb-2 ${orderType === value ? "text-caramel" : "text-muted-foreground"}`} />
+                      <Icon className={`h-5 w-5 mx-auto mb-2 ${orderType === value ? "text-gold" : "text-muted-foreground"}`} />
                       <div className="text-sm font-medium">{label}</div>
                       <div className="text-[10px] text-muted-foreground mt-0.5">{desc}</div>
                     </button>
@@ -85,7 +85,7 @@ export default function CheckoutPage() {
                       value={tableNumber}
                       onChange={(e) => setTableNumber(e.target.value)}
                       placeholder="Enter your table number"
-                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20"
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                     />
                   </div>
                 )}
@@ -103,7 +103,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Your name"
                       required
-                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20"
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                     />
                   </div>
                   <div>
@@ -114,7 +114,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="+91 98765 43210"
                       required
-                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20"
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                     />
                   </div>
                   {orderType === "delivery" && (
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Full delivery address"
                         rows={3}
-                        className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20 resize-none"
+                        className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 resize-none"
                       />
                     </div>
                   )}
@@ -136,7 +136,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       placeholder="Any allergies, preferences, or special requests..."
                       rows={2}
-                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20 resize-none"
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 resize-none"
                     />
                   </div>
                 </div>
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
                 </div>
                 <button
                   type="submit"
-                  className="mt-6 w-full flex items-center justify-center gap-2 bg-caramel hover:bg-caramel/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+                  className="mt-6 w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
                 >
                   Continue to Payment
                   <ChevronRight className="h-4 w-4" />

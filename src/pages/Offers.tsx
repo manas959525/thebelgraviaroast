@@ -14,8 +14,8 @@ const offers = [
     validTill: "31 Dec 2026",
     minOrder: "₹300",
     icon: Gift,
-    color: "from-caramel/20 to-caramel/5",
-    borderColor: "border-caramel/30",
+    color: "from-gold/20 to-gold/5",
+    borderColor: "border-gold/30",
     tag: "New Guests",
   },
   {
@@ -132,7 +132,7 @@ export default function OffersPage() {
                 className={`bg-gradient-to-br ${offer.color} rounded-2xl border ${offer.borderColor} p-6 hover:shadow-lg transition-all`}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 text-caramel">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 text-gold">
                     <Icon className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-white/80 text-foreground/70 px-2.5 py-1 rounded-full">
