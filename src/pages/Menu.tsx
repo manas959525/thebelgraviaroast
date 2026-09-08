@@ -69,13 +69,12 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
               <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                 {product.description}
               </p>
-            </div>
-            {product.bestSeller && (
-              <span className="shrink-0 flex items-center gap-1 bg-caramel/10 text-caramel text-[10px] font-bold px-2 py-0.5 rounded-full">
-                <Star className="h-2.5 w-2.5 fill-current" />
-                Best Seller
-              </span>
-            )}
+            </div>              {(product.badge === "bestseller" || product.bestSeller) && (
+                  <span className="shrink-0 flex items-center gap-1 bg-coral/10 text-coral text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <Star className="h-2.5 w-2.5 fill-current" />
+                    Best Seller
+                  </span>
+                )}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2">
@@ -88,7 +87,7 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Clock className="h-3 w-3" /> {product.prepTime} min
               </span>
-              <span className="text-[10px] text-muted-foreground">{product.calories} cal</span>
+              {product.calories && <span className="text-[10px] text-muted-foreground">{product.calories} cal</span>}
               <button
                 onClick={handleAdd}
                 className="h-8 w-8 rounded-xl bg-caramel text-white flex items-center justify-center text-lg font-bold hover:bg-caramel/90 transition-all hover:shadow-md shrink-0"
@@ -208,7 +207,7 @@ export default function MenuPage() {
                   : "bg-white border border-border text-foreground/70 hover:bg-muted"
               }`}
             >
-              <span>{cat.image}</span>
+              <span>{cat.emoji}</span>
               {cat.name}
             </button>
           ))}

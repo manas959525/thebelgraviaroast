@@ -55,7 +55,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Nav */}
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
@@ -68,18 +67,15 @@ export default function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between lg:h-20">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-transform group-hover:scale-105">
+            {/* Logo — The Belgravia Roast */}
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral text-white transition-transform group-hover:scale-105">
                 <Coffee className="h-5 w-5" />
               </div>
-              <div className="hidden sm:block">
-                <span className="text-lg font-bold tracking-tight text-foreground">
-                  The Belgravia
-                </span>
-                <span className="text-lg font-light text-caramel ml-1">
-                  Roast
-                </span>
+              <div className="hidden sm:block leading-tight">
+                <div className="text-[10px] font-medium text-muted-foreground tracking-[0.2em] uppercase -mb-0.5">The</div>
+                <span className="text-base font-bold tracking-tight text-foreground">BELGRAVIA</span>
+                <span className="text-base font-light text-coral ml-1">Roast</span>
               </div>
             </Link>
 
@@ -93,7 +89,7 @@ export default function Navbar() {
                     to={link.to}
                     className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                       active
-                        ? "text-primary"
+                        ? "text-coral"
                         : "text-foreground/70 hover:text-foreground hover:bg-foreground/5"
                     }`}
                   >
@@ -101,7 +97,7 @@ export default function Navbar() {
                     {active && (
                       <motion.div
                         layoutId="nav-indicator"
-                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-caramel rounded-full"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-coral rounded-full"
                       />
                     )}
                   </Link>
@@ -111,7 +107,6 @@ export default function Navbar() {
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
-              {/* Search */}
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
@@ -120,7 +115,6 @@ export default function Navbar() {
                 <Search className="h-4.5 w-4.5 text-foreground/70" />
               </button>
 
-              {/* Account */}
               <Link
                 to={isAuthenticated ? "/dashboard" : "/auth"}
                 className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
@@ -128,7 +122,6 @@ export default function Navbar() {
                 <User className="h-4.5 w-4.5 text-foreground/70" />
               </Link>
 
-              {/* Cart */}
               <Link
                 to="/cart"
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
@@ -138,22 +131,20 @@ export default function Navbar() {
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-caramel text-[10px] font-bold text-white px-1"
+                    className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-coral text-[10px] font-bold text-white px-1"
                   >
                     {count}
                   </motion.span>
                 )}
               </Link>
 
-              {/* Order Now CTA */}
               <Link
                 to="/menu"
-                className="hidden md:inline-flex items-center gap-1.5 bg-caramel hover:bg-caramel/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-caramel/20"
+                className="hidden md:inline-flex items-center gap-1.5 bg-coral hover:bg-ember text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-coral/20"
               >
                 Order Now
               </Link>
 
-              {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5"
@@ -181,8 +172,8 @@ export default function Navbar() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search our menu..."
-                    className="w-full rounded-xl border border-border bg-white/50 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20 transition-all"
+                    placeholder='What are you craving today?'
+                    className="w-full rounded-xl border border-border bg-white/50 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20 transition-all"
                     autoFocus
                   />
                 </div>
@@ -211,9 +202,11 @@ export default function Navbar() {
               className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-white shadow-2xl lg:hidden"
             >
               <div className="flex items-center justify-between p-4 border-b">
-                <span className="text-lg font-bold">
-                  The Belgravia <span className="text-caramel">Roast</span>
-                </span>
+                <div>
+                  <div className="text-[9px] text-muted-foreground tracking-[0.2em] uppercase">The</div>
+                  <span className="text-base font-bold">BELGRAVIA</span>
+                  <span className="text-base font-light text-coral ml-1">Roast</span>
+                </div>
                 <button onClick={() => setMobileOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted">
                   <X className="h-5 w-5" />
                 </button>
@@ -227,7 +220,7 @@ export default function Navbar() {
                       key={link.to}
                       to={link.to}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        active ? "bg-caramel/10 text-caramel" : "text-foreground/70 hover:bg-muted"
+                        active ? "bg-coral/10 text-coral" : "text-foreground/70 hover:bg-muted"
                       }`}
                     >
                       <Icon className="h-4.5 w-4.5" />
@@ -240,7 +233,7 @@ export default function Navbar() {
               <div className="p-4 border-t">
                 <Link
                   to="/menu"
-                  className="flex items-center justify-center w-full bg-caramel text-white py-2.5 rounded-xl text-sm font-semibold"
+                  className="flex items-center justify-center w-full bg-coral text-white py-2.5 rounded-xl text-sm font-semibold"
                 >
                   Order Now
                 </Link>
@@ -264,21 +257,18 @@ export default function Navbar() {
                 className="relative flex flex-col items-center gap-0.5 px-3 py-1"
               >
                 <div className="relative">
-                  <Icon className={`h-5 w-5 transition-colors ${active ? "text-caramel" : "text-foreground/50"}`} />
+                  <Icon className={`h-5 w-5 transition-colors ${active ? "text-coral" : "text-foreground/50"}`} />
                   {isCart && count > 0 && (
-                    <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-caramel text-[9px] font-bold text-white px-1">
+                    <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral text-[9px] font-bold text-white px-1">
                       {count}
                     </span>
                   )}
                 </div>
-                <span className={`text-[10px] font-medium transition-colors ${active ? "text-caramel" : "text-foreground/50"}`}>
+                <span className={`text-[10px] font-medium transition-colors ${active ? "text-coral" : "text-foreground/50"}`}>
                   {link.label}
                 </span>
                 {active && (
-                  <motion.div
-                    layoutId="bottom-nav"
-                    className="absolute -top-0.5 w-6 h-0.5 rounded-full bg-caramel"
-                  />
+                  <motion.div layoutId="bottom-nav" className="absolute -top-0.5 w-6 h-0.5 rounded-full bg-coral" />
                 )}
               </Link>
             );

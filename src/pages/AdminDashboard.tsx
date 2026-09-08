@@ -246,7 +246,7 @@ function CategoriesView() {
         {categories.map((cat) => (
           <div key={cat.id} className="bg-white rounded-2xl border border-border/50 p-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="text-3xl">{cat.image}</div>
+              <div className="text-3xl">{cat.emoji}</div>
               <div>
                 <h3 className="font-semibold text-foreground">{cat.name}</h3>
                 <p className="text-xs text-muted-foreground">{cat.productCount} products · {cat.slug}</p>
@@ -484,8 +484,7 @@ function AnalyticsView() {
       </div>
       <div className="bg-white rounded-2xl border border-border/50 p-6">
         <h3 className="font-semibold mb-4">Top Selling Items</h3>
-        <div className="space-y-3">
-          {products.filter((p) => p.bestSeller).slice(0, 5).map((p, i) => (
+        <div className="space-y-3">                    {products.filter((p) => p.badge === "bestseller" || p.bestSeller).slice(0, 5).map((p, i) => (
             <div key={p.id} className="flex items-center gap-4">
               <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}.</span>
               <img src={p.image} alt="" className="h-10 w-10 rounded-lg object-cover" />

@@ -108,8 +108,8 @@ export default function ProductDetail() {
                 ) : (
                   <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Non-Veg</span>
                 )}
-                {product.bestSeller && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-caramel bg-caramel/10 px-2 py-0.5 rounded-full">
+                {(product.badge === "bestseller" || product.bestSeller) && (
+                  <span className="flex items-center gap-1 text-xs font-medium text-coral bg-coral/10 px-2 py-0.5 rounded-full">
                     <Star className="h-3 w-3 fill-current" /> Best Seller
                   </span>
                 )}
@@ -124,39 +124,15 @@ export default function ProductDetail() {
                   <Clock className="h-4 w-4" />
                   {product.prepTime} min prep
                 </div>
+                {product.calories && (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Flame className="h-4 w-4" />
                   {product.calories} calories
                 </div>
+                )}
               </div>
 
-              {/* Ingredients */}
-              {product.ingredients.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-foreground mb-2">Ingredients</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {product.ingredients.map((ing) => (
-                      <span key={ing} className="text-xs bg-muted px-3 py-1 rounded-full text-muted-foreground">
-                        {ing}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Allergens */}
-              {product.allergens.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-foreground mb-2">Allergens</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {product.allergens.map((a) => (
-                      <span key={a} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-medium">
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </motion.div>
           </div>
 

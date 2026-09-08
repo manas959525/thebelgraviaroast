@@ -110,7 +110,7 @@ export default function TableOrdering() {
                       selectedCat === cat.slug ? "bg-caramel text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
                     }`}
                   >
-                    {cat.image} {cat.name}
+                    {cat.emoji} {cat.name}
                   </button>
                 ))}
               </div>
