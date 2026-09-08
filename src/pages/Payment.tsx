@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, CreditCard, Smartphone, Building2, QrCode, AlertTriangle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { clearCart } from "@/lib/cart";
 

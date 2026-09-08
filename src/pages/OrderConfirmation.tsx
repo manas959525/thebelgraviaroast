@@ -4,11 +4,15 @@ import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone } from "lucide-reac
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+// Fallback only for direct visits without order state; computed at module load,
+// never during render.
+const FALLBACK_ORDER_ID = `TBR-${Date.now().toString(36).toUpperCase()}`;
+
 export default function OrderConfirmation() {
   const location = useLocation();
   const state = location.state as { orderId?: string; total?: number; orderType?: string; tableNumber?: string } | null;
 
-  const orderId = state?.orderId || `TBR-${Date.now().toString(36).toUpperCase()}`;
+  const orderId = state?.orderId || FALLBACK_ORDER_ID;
   const total = state?.total || 0;
 
   return (

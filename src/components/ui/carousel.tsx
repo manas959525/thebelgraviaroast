@@ -88,7 +88,7 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api || !setApi) return
-    setApi(api)
+    queueMicrotask(() => setApi(api))
   }, [api, setApi])
 
   React.useEffect(() => {

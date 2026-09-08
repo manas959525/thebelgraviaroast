@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, Coffee } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 export default function NotFound() {

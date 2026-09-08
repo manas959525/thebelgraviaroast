@@ -38,8 +38,11 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
-    setSearchOpen(false);
+    const t = setTimeout(() => {
+      setMobileOpen(false);
+      setSearchOpen(false);
+    }, 0);
+    return () => clearTimeout(t);
   }, [location.pathname]);
 
   const handleSearch = (e: React.FormEvent) => {

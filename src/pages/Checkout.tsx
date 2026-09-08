@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Truck, Store, CreditCard, ChevronRight } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, Store, ChevronRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/cart";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, total, count } = useCart();
+  const { items, total } = useCart();
   const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | "delivery">("dine-in");
   const [tableNumber, setTableNumber] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", address: "", notes: "" });

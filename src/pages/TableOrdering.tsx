@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
-import { QrCode, ShoppingCart, Coffee, ArrowRight, Check } from "lucide-react";
+import { QrCode, ShoppingCart, Coffee, Check } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";

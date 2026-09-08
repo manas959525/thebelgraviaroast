@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import {
-  LayoutDashboard, Coffee, ShoppingBag, Tag, Users, BarChart3,
-  Settings, ChevronRight, Clock, TrendingUp, DollarSign, Package,
-  CheckCircle, XCircle, AlertCircle, Eye, Edit, Trash2, Plus,
-  QrCode, Calendar, ArrowUpRight, Search, Filter, Download,
+  LayoutDashboard, Coffee, ShoppingBag, Tag, BarChart3,
+  Settings, TrendingUp, DollarSign, Package,
+  CheckCircle, XCircle, Eye, Edit, Trash2, Plus,
+  QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";

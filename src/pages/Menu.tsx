@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, X, Clock, Star, Leaf } from "lucide-react";
+import { Search, Clock, Star, Leaf } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";

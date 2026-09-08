@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Award, Heart, Leaf, Users, Coffee, Clock } from "lucide-react";
+import { Award, Heart, Leaf, Users, Coffee } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 

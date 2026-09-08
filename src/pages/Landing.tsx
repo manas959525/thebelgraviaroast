@@ -2,11 +2,12 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
-  ArrowRight, Star, Award, Leaf, Coffee, Heart,
-  ChevronRight, Sparkles, Users, ShieldCheck, Zap, Quote, ChevronDown,
+  ArrowRight, Star, Award, Leaf, Coffee,
+  ChevronRight, Sparkles, ShieldCheck, Quote, ChevronDown,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { CoffeeSpillScene, SteamWisp, FloatingBean } from "@/components/CoffeeSpillScene";
 import { getBestSellers, getSignature, getPopular } from "@/data/menu";
 import { addToCart } from "@/lib/cart";
 import { toast } from "sonner";
@@ -23,89 +24,6 @@ const fadeUp = {
 const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
-
-// ── Steam Effect ────────────────────────────────────
-function SteamWisp({ className = "", delay = 0 }: { className?: string; delay?: number }) {
-  return (
-    <motion.div
-      className={`absolute ${className}`}
-      initial={{ opacity: 0, y: 0, scale: 0.8 }}
-      animate={{ opacity: [0, 0.5, 0], y: [0, -25, -55], scale: [0.8, 1.2, 0.5], x: [0, 6, -3] }}
-      transition={{ duration: 2.5, delay, repeat: Infinity, ease: "easeOut" as const }}
-    >
-      <svg width="16" height="36" viewBox="0 0 16 36" fill="none">
-        <path d="M8 36C8 36 1 26 1 16C1 8 15 8 15 16C15 26 8 36 8 36Z" fill="url(#sg)" opacity="0.5" />
-        <defs>
-          <linearGradient id="sg" x1="8" y1="36" x2="8" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="white" stopOpacity="0" />
-            <stop offset="1" stopColor="white" stopOpacity="0.6" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </motion.div>
-  );
-}
-
-// ── Floating Coffee Bean ────────────────────────────
-function FloatingBean({ className, delay = 0 }: { className?: string; delay?: number }) {
-  return (
-    <motion.div
-      className={`absolute pointer-events-none select-none ${className}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1, y: [0, -10, 0], rotate: [0, 5, -3, 0] }}
-      transition={{ duration: 7, delay, repeat: Infinity, ease: "easeInOut" }}
-    >
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="14" cy="14" rx="10" ry="13" fill="#8B7D6B" opacity="0.6" transform="rotate(-20 14 14)" />
-        <path d="M14 2C14 2 11 10 11 14C11 18 14 26 14 26" stroke="#1B2A3D" strokeWidth="1.2" opacity="0.4" fill="none" />
-      </svg>
-    </motion.div>
-  );
-}
-
-// ── Coffee Spill Scene (hero only) ──────────────────
-function CoffeeSpillScene() {
-  return (
-    <div className="coffee-scene" aria-hidden="true">
-      {/* Steam rising from the rim */}
-      <div className="coffee-steam">
-        <SteamWisp />
-        <SteamWisp className="left-3" delay={0.4} />
-        <SteamWisp className="left-6" delay={0.8} />
-      </div>
-
-      {/* Mug that tilts and spills */}
-      <div className="coffee-mug-wrap">
-        <div className="coffee-mug">
-          <svg viewBox="0 0 230 175" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Handle */}
-            <path d="M178 48c30 0 36 36 0 42" stroke="#6F4E37" strokeWidth="12" fill="none" strokeLinecap="round" />
-            {/* Body */}
-            <path d="M52 22h126v116q0 14-13 14H65q-13 0-13-14V22z" fill="#6F4E37" />
-            {/* Sheen */}
-            <path d="M52 22h126v34H52z" fill="#8A6A48" opacity="0.35" />
-            {/* Rim */}
-            <ellipse cx="115" cy="22" rx="63" ry="11" fill="#8A6A48" />
-            {/* Coffee surface */}
-            <ellipse cx="115" cy="25" rx="55" ry="8" fill="#3E2A1A" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Spilled stream */}
-      <div className="coffee-stream" />
-
-      {/* Splash pool + droplets */}
-      <div className="coffee-splash">
-        <div className="coffee-pool" />
-        <span className="coffee-drop d1" />
-        <span className="coffee-drop d2" />
-        <span className="coffee-drop d3" />
-        <span className="coffee-drop d4" />
-      </div>
-    </div>
-  );
-}
 
 // ── Product Card ────────────────────────────────────
 function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[0]; index: number }) {
@@ -432,12 +350,12 @@ export default function Landing() {
             </motion.div>
             </div>
 
-            {/* Coffee spill scene — animates after the intro */}
+            {/* Cinematic coffee scene — choreography starts as the intro fades */}
             {introComplete && (
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 3.4, duration: 0.7, ease: "easeOut" as const }}
+                transition={{ duration: 0.7, ease: "easeOut" as const }}
                 className="justify-self-center mt-12 lg:mt-0"
               >
                 <CoffeeSpillScene />
