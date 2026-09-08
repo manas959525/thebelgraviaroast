@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { UpiQrCode } from "@/components/UpiQrCode";
 import { clearCart } from "@/lib/cart";
 
 type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed" | "failed";
@@ -42,6 +43,7 @@ export default function PaymentPage() {
 
   const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
+  const [qrImageFailed, setQrImageFailed] = useState(false);
   const [orderId] = useState(() => generateOrderId());
   const total = state?.grandTotal || 0;
 
@@ -147,24 +149,18 @@ export default function PaymentPage() {
                   <div className="text-xs text-muted-foreground mt-1">UPI Payment</div>
                 </div>
 
-                {/* QR Code — your uploaded Paytm UPI QR */}
+                {/* QR Code — your uploaded Paytm UPI QR, with a generated placeholder until the file is added */}
                 <div className="mx-auto w-56 h-56 sm:w-64 sm:h-64 rounded-2xl bg-white flex items-center justify-center border-2 border-border/60 overflow-hidden mb-5 shadow-sm">
-                  <img
-                    src="/manasqrcode.jpeg"
-                    alt="Scan this QR code with any UPI app to pay The Belgravia Roast"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                      const parent = target.parentElement;
-                      if (parent && !parent.querySelector(".qr-fallback")) {
-                        const fallback = document.createElement("div");
-                        fallback.className = "qr-fallback text-center p-6";
-                        fallback.innerHTML = '<div class="text-5xl mb-3">📱</div><p class="text-sm font-medium text-foreground">UPI QR Code</p><p class="text-xs text-muted-foreground mt-2">Please place your QR image at:<br/><code class="bg-muted px-2 py-0.5 rounded text-[10px] mt-1 inline-block">public/manasqrcode.jpeg</code></p>';
-                        parent.appendChild(fallback);
-                      }
-                    }}
-                  />
+                  {qrImageFailed ? (
+                    <UpiQrCode amount={total} orderId={orderId} />
+                  ) : (
+                    <img
+                      src="/manasqrcode.jpeg"
+                      alt="Scan this QR code with any UPI app to pay The Belgravia Roast"
+                      className="w-full h-full object-contain"
+                      onError={() => setQrImageFailed(true)}
+                    />
+                  )}
                 </div>
 
                 {/* UPI ID */}
