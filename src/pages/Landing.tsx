@@ -63,6 +63,50 @@ function FloatingBean({ className, delay = 0 }: { className?: string; delay?: nu
   );
 }
 
+// ── Coffee Spill Scene (hero only) ──────────────────
+function CoffeeSpillScene() {
+  return (
+    <div className="coffee-scene" aria-hidden="true">
+      {/* Steam rising from the rim */}
+      <div className="coffee-steam">
+        <SteamWisp />
+        <SteamWisp className="left-3" delay={0.4} />
+        <SteamWisp className="left-6" delay={0.8} />
+      </div>
+
+      {/* Mug that tilts and spills */}
+      <div className="coffee-mug-wrap">
+        <div className="coffee-mug">
+          <svg viewBox="0 0 230 175" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Handle */}
+            <path d="M178 48c30 0 36 36 0 42" stroke="#6F4E37" strokeWidth="12" fill="none" strokeLinecap="round" />
+            {/* Body */}
+            <path d="M52 22h126v116q0 14-13 14H65q-13 0-13-14V22z" fill="#6F4E37" />
+            {/* Sheen */}
+            <path d="M52 22h126v34H52z" fill="#8A6A48" opacity="0.35" />
+            {/* Rim */}
+            <ellipse cx="115" cy="22" rx="63" ry="11" fill="#8A6A48" />
+            {/* Coffee surface */}
+            <ellipse cx="115" cy="25" rx="55" ry="8" fill="#3E2A1A" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Spilled stream */}
+      <div className="coffee-stream" />
+
+      {/* Splash pool + droplets */}
+      <div className="coffee-splash">
+        <div className="coffee-pool" />
+        <span className="coffee-drop d1" />
+        <span className="coffee-drop d2" />
+        <span className="coffee-drop d3" />
+        <span className="coffee-drop d4" />
+      </div>
+    </div>
+  );
+}
+
 // ── Product Card ────────────────────────────────────
 function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[0]; index: number }) {
   const handleAdd = (e: React.MouseEvent) => {
@@ -168,8 +212,8 @@ export default function Landing() {
       <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden bg-hero-dark noise-overlay">
         {/* Background layers */}
         <motion.div style={{ y: heroY, opacity: heroOpacity }} className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_50%,rgba(200,90,28,0.12),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_20%,rgba(212,88,58,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_50%,rgba(168,132,92,0.14),transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_20%,rgba(184,128,138,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1400&h=900&fit=crop')] bg-cover bg-center opacity-[0.07]" />
         </motion.div>
 
@@ -286,7 +330,7 @@ export default function Landing() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 2.8, duration: 0.5 }}
                     className="text-gradient-brand"
-                    style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #A8845C, #B8808A)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
+                    style={{ WebkitTextFillColor: "transparent", background: "linear-gradient(135deg, #FFDDB7, #C4A478, #6F4E37)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
                   >
                     ROAST
                   </motion.div>
@@ -298,7 +342,8 @@ export default function Landing() {
 
         {/* Main hero content (after intro) */}
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 pb-20">
-          <div className="max-w-3xl">
+          <div className="grid lg:grid-cols-2 lg:gap-10 lg:items-center">
+            <div className="max-w-3xl">
             {/* Brand name — dominant */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -310,7 +355,7 @@ export default function Landing() {
               <h1 className="font-display leading-[0.95] mb-4">
                 <span className="block text-white/70 text-3xl sm:text-4xl lg:text-5xl tracking-[0.2em] uppercase">The</span>
                 <span className="block text-white text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight">BELGRAVIA</span>
-                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight relative" style={{ background: "linear-gradient(135deg, #A8845C, #B8808A, #C4A478)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                <span className="block text-5xl sm:text-6xl lg:text-[5.5rem] font-bold tracking-tight relative" style={{ background: "linear-gradient(135deg, #FFDDB7, #C4A478, #6F4E37)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                   ROAST
                   {/* Shimmer line across ROAST */}
                   <motion.span
@@ -351,14 +396,14 @@ export default function Landing() {
             >
               <motion.div animate={{ boxShadow: ["0 4px 15px rgba(168,132,92,0.25)", "0 4px 25px rgba(168,132,92,0.4)", "0 4px 15px rgba(168,132,92,0.25)"] }} transition={{ duration: 3, repeat: Infinity }} className="inline-flex rounded-xl">
                 <Link to="/menu" className="btn-brand inline-flex items-center gap-2">
-                  Order Now <ArrowRight className="h-4 w-4" />
+                  Explore the Menu <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
               <Link
                 to="/menu"
                 className="inline-flex items-center gap-2 border border-white/20 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
               >
-                Explore Menu
+                Order Now
               </Link>
             </motion.div>
 
@@ -385,6 +430,19 @@ export default function Landing() {
                 </motion.div>
               ))}
             </motion.div>
+            </div>
+
+            {/* Coffee spill scene — animates after the intro */}
+            {introComplete && (
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 3.4, duration: 0.7, ease: "easeOut" as const }}
+                className="justify-self-center mt-12 lg:mt-0"
+              >
+                <CoffeeSpillScene />
+              </motion.div>
+            )}
           </div>
         </div>
 

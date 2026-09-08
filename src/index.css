@@ -341,3 +341,121 @@ html {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ═══ COFFEE SPILL HERO ANIMATION ═══ */
+.coffee-scene {
+  position: relative;
+  width: min(320px, 74vw);
+  aspect-ratio: 320 / 360;
+  margin-inline: auto;
+}
+
+.coffee-mug-wrap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  z-index: 2;
+}
+
+.coffee-mug {
+  transform-origin: 50% 95%;
+  animation: mug-tilt 1.6s cubic-bezier(0.34, 1.2, 0.5, 1) 0.4s both;
+}
+
+.coffee-mug svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Falling coffee stream */
+.coffee-stream {
+  position: absolute;
+  left: 36px;
+  top: 72px;
+  width: 16px;
+  height: 0;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #7a5538 0%, #4a3322 100%);
+  transform-origin: top center;
+  animation: stream-fall 0.85s cubic-bezier(0.22, 1, 0.36, 1) 1.15s both;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+  z-index: 3;
+}
+
+/* Splash pool */
+.coffee-splash {
+  position: absolute;
+  left: 24px;
+  top: 292px;
+  width: 220px;
+  height: 40px;
+  z-index: 1;
+}
+
+.coffee-pool {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #7a5538 0%, #5a3a24 55%, #33200f 100%);
+  transform: scale(0.15);
+  transform-origin: center;
+  animation:
+    pool-splash 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1.8s both,
+    pool-pulse 3.2s ease-in-out 2.7s infinite;
+  box-shadow: 0 10px 32px rgba(74, 51, 34, 0.55);
+}
+
+.coffee-drop {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6F4E37;
+  animation: droplet 0.9s cubic-bezier(0.22, 1, 0.36, 1) 2s both;
+}
+.coffee-drop.d1 { left: 28%; --dx: -24px; --dy: 16px; }
+.coffee-drop.d2 { left: 60%; --dx: 28px; --dy: -12px; animation-delay: 2.15s; }
+.coffee-drop.d3 { left: 44%; --dx: -12px; --dy: 20px; animation-delay: 2.3s; }
+.coffee-drop.d4 { left: 70%; --dx: 16px; --dy: 12px; animation-delay: 2.1s; }
+
+/* Steam above the mug */
+.coffee-steam {
+  position: absolute;
+  top: 26px;
+  left: 118px;
+  z-index: 4;
+}
+
+@keyframes mug-tilt {
+  0% { transform: rotate(0deg); }
+  55% { transform: rotate(-30deg); }
+  70% { transform: rotate(-23deg); }
+  85% { transform: rotate(-27deg); }
+  100% { transform: rotate(-27deg); }
+}
+
+@keyframes stream-fall {
+  0% { height: 0; opacity: 0; }
+  15% { opacity: 1; }
+  100% { height: 220px; opacity: 1; }
+}
+
+@keyframes pool-splash {
+  0% { transform: scale(0.15); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pool-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes droplet {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; }
+}
