@@ -86,19 +86,25 @@ function Carousel({
     [scrollPrev, scrollNext]
   )
 
-  React.useEffect(() => {
-    if (!api || !setApi) return
-    queueMicrotask(() => setApi(api))
-  }, [api, setApi])
+  // Lift the Embla API instance up to the parent and seed the scroll-button
+  // state. Embla creates its API inside its own effect, so this reports the new
+  // instance as it appears (the React-recommended "adjust state during render"
+  // pattern for new external values).
+  const [reportedApi, setReportedApi] = React.useState<CarouselApi | undefined>(undefined)
+  if (api && api !== reportedApi) {
+    setReportedApi(api)
+    if (setApi) setApi(api)
+    setCanScrollPrev(api.canScrollPrev())
+    setCanScrollNext(api.canScrollNext())
+  }
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
-      api?.off("select", onSelect)
+      api.off("select", onSelect)
     }
   }, [api, onSelect])
 
