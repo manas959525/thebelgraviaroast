@@ -25,6 +25,7 @@ const About = lazy(() => import("./pages/About.tsx"));
 const Offers = lazy(() => import("./pages/Offers.tsx"));
 const Contact = lazy(() => import("./pages/Contact.tsx"));
 const TableOrdering = lazy(() => import("./pages/TableOrdering.tsx"));
+const BuildYourDrink = lazy(() => import("./pages/BuildYourDrink.tsx"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
 
 function RouteLoading() {
@@ -137,6 +138,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/offers" element={<Offers />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/table-ordering" element={<TableOrdering />} />
+              <Route path="/build-your-drink" element={<BuildYourDrink />} />
 
               {/* Admin (protected) */}
               <Route

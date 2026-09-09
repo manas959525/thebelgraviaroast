@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Clock, Star, Leaf, Heart, Flame, Sparkles, ChevronRight } from "lucide-react";
+import { Search, Clock, Star, Leaf, Heart, Flame, Sparkles, ChevronRight, Coffee } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";
@@ -285,6 +285,12 @@ export default function MenuPage() {
               <Sparkles className={`h-4 w-4 ${rolling ? "animate-spin" : ""}`} />
               {rolling ? "Picking..." : "Surprise Me"}
             </button>
+            <Link
+              to="/build-your-drink"
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 transition-all"
+            >
+              <Coffee className="h-4 w-4" /> Build Your Drink
+            </Link>
           </div>
 
           {/* Surprise reveal */}

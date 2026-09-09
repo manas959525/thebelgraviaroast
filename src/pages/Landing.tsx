@@ -260,7 +260,7 @@ function QuickOrder() {
           <motion.p variants={fadeUp} custom={2} className="text-muted-foreground mt-2">One tap takes you straight to the good stuff</motion.p>
         </motion.div>
 
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {cravingChips.map((chip, i) => (
             <motion.div key={chip.cat} variants={fadeUp} custom={i}>
               <Link
@@ -273,6 +273,25 @@ function QuickOrder() {
               </Link>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Build your drink banner */}
+        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10">
+          <Link
+            to="/build-your-drink"
+            className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-dusty-rose/30 bg-gradient-to-r from-dusty-rose/10 via-champagne to-sage/10 p-5 hover:shadow-lg transition-all duration-300"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-dusty-rose text-white group-hover:scale-105 transition-transform">
+              <Coffee className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <div className="font-bold text-foreground">Build Your Drink ☕</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Pick a base, size, milk and extras — watch your coffee come together step by step.</div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-dusty-rose group-hover:text-burgundy transition-colors shrink-0">
+              Start building <ChevronRight className="h-4 w-4" />
+            </span>
+          </Link>
         </motion.div>
 
         {/* Surprise me */}

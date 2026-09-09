@@ -71,6 +71,18 @@ export function getCartTotal() {
     if (item.selectedSize === "Medium") extra += 20;
     if (item.selectedSize === "Large") extra += 40;
     if (item.selectedMilk === "Oat Milk" || item.selectedMilk === "Almond Milk") extra += 30;
+    // Customization option extras (e.g. oat/almond milk defined on the product)
+    const chosenCustomizations = item.customizations ?? [];
+    item.product.customizations?.forEach((group) =>
+      group.options.forEach((opt) => {
+        if (chosenCustomizations.includes(opt.name)) extra += opt.price;
+      }),
+    );
+    // Add-on extras (e.g. syrups, extra shot, whipped cream)
+    (item.addOns ?? []).forEach((name) => {
+      const addOn = item.product.addOns?.find((a) => a.name === name);
+      if (addOn) extra += addOn.price;
+    });
     return (sum + basePrice + extra) * item.quantity;
   }, 0);
 }

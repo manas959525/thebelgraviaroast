@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink, Receipt } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import { UpiQrCode } from "@/components/UpiQrCode";
 import { clearCart, getCartItems } from "@/lib/cart";
+import { toast } from "sonner";
 
 type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed" | "failed";
 
@@ -33,6 +36,8 @@ function generateUpiDeepLink(amount: number, orderId: string): string {
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const placeOrder = useMutation(api.cafe.placeOrder);
+
   const state = location.state as {
     grandTotal?: number;
     subtotal?: number;
@@ -43,11 +48,13 @@ export default function PaymentPage() {
     tableNumber?: string;
     name?: string;
     phone?: string;
+    notes?: string;
   } | null;
 
   const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
   const [qrImageFailed, setQrImageFailed] = useState(false);
+  const [utr, setUtr] = useState("");
   const [orderId] = useState(() => generateOrderId());
   const total = state?.grandTotal || 0;
 
@@ -57,63 +64,87 @@ export default function PaymentPage() {
     window.open(deepLink, "_blank");
   };
 
+  /** Persist the order + payment to Convex, then hand off to the receipt page. */
+  const submitOrder = async (paymentMethod: string, paymentStatus: "paid" | "pending", extraState: Record<string, string | undefined> = {}) => {
+    const cartItems = getCartItems();
+    const orderData = {
+      orderNumber: orderId,
+      items: cartItems.map((i) => ({
+        productId: i.product.id,
+        name: i.product.name,
+        price: i.product.discountPrice ?? i.product.price,
+        quantity: i.quantity,
+        customizations: i.customizations,
+        addOns: i.addOns,
+      })),
+      subtotal: state?.subtotal ?? total,
+      tax: state?.tax ?? Math.round(total * 0.05),
+      discount: state?.discount ?? 0,
+      total,
+      orderType: (state?.orderType as "dine-in" | "takeaway" | "delivery") || "dine-in",
+      tableNumber: state?.tableNumber,
+      guestName: state?.name,
+      guestPhone: state?.phone,
+      notes: state?.notes,
+      paymentMethod,
+      utr: utr.trim() || undefined,
+    };
+
+    let db: { orderId: string; paymentId: string; receiptId: string } | null = null;
+    try {
+      db = await placeOrder(orderData);
+    } catch {
+      toast.warning("Couldn't reach the café database — your receipt is saved on this device.");
+    }
+
+    clearCart();
+    navigate("/order-confirmation", {
+      state: {
+        orderId,
+        total,
+        subtotal: state?.subtotal ?? total,
+        tax: state?.tax ?? Math.round(total * 0.05),
+        discount: state?.discount ?? 0,
+        couponCode: state?.couponCode,
+        orderType: state?.orderType || "dine-in",
+        tableNumber: state?.tableNumber,
+        guestName: state?.name,
+        paymentMethod,
+        paymentStatus,
+        utr: utr.trim() || undefined,
+        dbOrderId: db?.orderId,
+        paymentId: db?.paymentId,
+        receiptId: db?.receiptId ?? `RCPT-${orderId.replace(/^TBR-/, "").slice(0, 8)}`,
+        items: cartItems.map((i) => ({
+          productId: i.product.id,
+          name: i.product.name,
+          qty: i.quantity,
+          price: i.product.discountPrice ?? i.product.price,
+        })),
+        ...extraState,
+      },
+    });
+  };
+
   const handlePaymentCompleted = () => {
     setPaymentStatus("verification_pending");
     setTimeout(() => {
       setPaymentStatus("completed");
-      const cartItems = getCartItems();
-      clearCart();
-      navigate("/order-confirmation", {
-        state: {
-          orderId,
-          total,
-          subtotal: state?.subtotal ?? total,
-          tax: state?.tax ?? Math.round(total * 0.05),
-          discount: state?.discount ?? 0,
-          couponCode: state?.couponCode,
-          orderType: state?.orderType || "dine-in",
-          tableNumber: state?.tableNumber,
-          guestName: state?.name,
-          paymentMethod: "upi",
-          paymentStatus: "paid",
-          items: cartItems.map((i) => ({
-            productId: i.product.id,
-            name: i.product.name,
-            qty: i.quantity,
-            price: i.product.discountPrice ?? i.product.price,
-          })),
-        },
-      });
-    }, 1500);
+      void submitOrder("upi", "pending");
+    }, 900);
   };
 
   const handleCashOrder = () => {
     setPaymentStatus("initiated");
+    void submitOrder("cash", "pending");
+  };
+
+  const handleCardOrder = () => {
+    setPaymentStatus("verification_pending");
     setTimeout(() => {
-      const cartItems = getCartItems();
-      clearCart();
-      navigate("/order-confirmation", {
-        state: {
-          orderId,
-          total,
-          subtotal: state?.subtotal ?? total,
-          tax: state?.tax ?? Math.round(total * 0.05),
-          discount: state?.discount ?? 0,
-          couponCode: state?.couponCode,
-          orderType: state?.orderType || "dine-in",
-          tableNumber: state?.tableNumber,
-          guestName: state?.name,
-          paymentMethod: "cash",
-          paymentStatus: "pending",
-          items: cartItems.map((i) => ({
-            productId: i.product.id,
-            name: i.product.name,
-            qty: i.quantity,
-            price: i.product.discountPrice ?? i.product.price,
-          })),
-        },
-      });
-    }, 1000);
+      setPaymentStatus("completed");
+      void submitOrder("card", "pending");
+    }, 900);
   };
 
   return (
@@ -177,7 +208,7 @@ export default function PaymentPage() {
                   <div className="text-xs text-muted-foreground mt-1">UPI Payment</div>
                 </div>
 
-                {/* QR Code — your uploaded Paytm UPI QR, with a generated placeholder until the file is added */}
+                {/* QR Code */}
                 <div className="mx-auto w-56 h-56 sm:w-64 sm:h-64 rounded-2xl bg-white flex items-center justify-center border-2 border-border/60 overflow-hidden mb-5 shadow-sm">
                   {qrImageFailed ? (
                     <UpiQrCode amount={total} orderId={orderId} />
@@ -223,7 +254,7 @@ export default function PaymentPage() {
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                       className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2 overflow-hidden">
                       <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span className="text-xs text-amber-700">Verifying payment with our system. Please wait...</span>
+                      <span className="text-xs text-amber-700">Recording your payment and generating your receipt...</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -239,7 +270,7 @@ export default function PaymentPage() {
                       Open UPI App
                     </button>
                     <button
-                      onClick={handlePaymentCompleted}
+                      onClick={() => setPaymentStatus("initiated")}
                       className="w-full flex items-center justify-center gap-2 border border-border text-foreground py-3 rounded-xl text-sm font-medium hover:bg-muted transition-all"
                     >
                       I Have Completed Payment
@@ -247,25 +278,44 @@ export default function PaymentPage() {
                   </div>
                 )}
                 {paymentStatus === "initiated" && (
-                  <button
-                    onClick={handlePaymentCompleted}
-                    className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
-                  >
-                    <Check className="h-4 w-4" />
-                    I Have Completed Payment
-                  </button>
+                  <div className="space-y-3 text-left">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1.5 block">
+                        UTR / Transaction Reference <span className="text-muted-foreground font-normal">(from your UPI app — speeds up verification)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={utr}
+                        onChange={(e) => setUtr(e.target.value)}
+                        placeholder="e.g. 415982736401"
+                        className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-mono outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                      />
+                    </div>
+                    <button
+                      onClick={handlePaymentCompleted}
+                      className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+                    >
+                      <Receipt className="h-4 w-4" />
+                      Confirm Payment & Get Receipt
+                    </button>
+                    <button
+                      onClick={() => setPaymentStatus("idle")}
+                      className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Go back
+                    </button>
+                  </div>
                 )}
                 {paymentStatus === "verification_pending" && (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-3">
                     <div className="h-4 w-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
-                    Verifying...
+                    Verifying & creating your receipt...
                   </div>
                 )}
 
                 {/* Security notice */}
                 <div className="mt-4 text-[10px] text-muted-foreground leading-relaxed">
-                  Clicking "I Have Completed Payment" does not guarantee payment success.
-                  Your order status will update after server-side verification.
+                  Your UTR lets our team verify the payment instantly. The receipt is generated immediately; the payment status is confirmed by the café.
                 </div>
               </motion.div>
             )}
@@ -294,7 +344,7 @@ export default function PaymentPage() {
                     <input type="text" placeholder="Your name" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20" />
                   </div>
                 </div>
-                <button onClick={handlePaymentCompleted} disabled={paymentStatus !== "idle"}
+                <button onClick={handleCardOrder} disabled={paymentStatus !== "idle"}
                   className="mt-6 w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
                   {paymentStatus !== "idle" ? (
                     <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>

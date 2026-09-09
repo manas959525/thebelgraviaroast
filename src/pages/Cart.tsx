@@ -100,6 +100,9 @@ export default function CartPage() {
                             {item.selectedMilk && (
                               <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full">{item.selectedMilk}</span>
                             )}
+                            {(item.addOns ?? []).map((a) => (
+                              <span key={a} className="text-[10px] bg-gold/10 text-gold px-1.5 py-0.5 rounded-full">+ {a}</span>
+                            ))}
                           </div>
                           <div className="flex items-center justify-between mt-3">
                             <span className="font-bold text-foreground">₹{price * item.quantity}</span>

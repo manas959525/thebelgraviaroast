@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
 import { QrCode, ShoppingCart, Coffee, Check, Bell, Droplets, Utensils, Receipt, Brush, Sparkles } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";
@@ -19,6 +21,7 @@ const serviceActions: { type: ServiceRequest["type"]; label: string; icon: typeo
 
 export default function TableOrdering() {
   const [searchParams] = useSearchParams();
+  const recordRequest = useMutation(api.cafe.recordServiceRequest);
   const qrTable = searchParams.get("table") || "";
 
   const [step, setStep] = useState<"scan" | "menu" | "cart">(qrTable ? "menu" : "scan");
@@ -39,7 +42,8 @@ export default function TableOrdering() {
       toast.error("Enter your table number first");
       return;
     }
-    addServiceRequest(tableNum.trim(), type);
+    addServiceRequest(tableNum.trim(), type); // local copy for resilience
+    void recordRequest({ table: tableNum.trim(), type }); // live copy for the staff console
     toast.success(`${label} — our team has been notified`);
   };
 

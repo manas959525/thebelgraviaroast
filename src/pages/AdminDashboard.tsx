@@ -11,11 +11,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
 import { categories, products } from "@/data/menu";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
-import {
-  resolveServiceRequest, timeAgo, useOrders, useServiceRequests,
-  updateOrderStatus, ORDER_STATUS_ORDER,
-} from "@/lib/orders";
+import { timeAgo, ORDER_STATUS_ORDER } from "@/lib/orders";
 import { toast } from "sonner";
 
 type AdminSection =
@@ -82,23 +81,36 @@ const boardColumns: { key: BoardStatus; label: string; dot: string }[] = [
 ];
 
 function DashboardView() {
-  const realOrders = useOrders();
-  const serviceRequests = useServiceRequests();
+  const convexOrders = useQuery(api.cafe.listOrders);
+  const convexPayments = useQuery(api.cafe.listPayments);
+  const convexRequests = useQuery(api.cafe.listServiceRequests);
+  const convexAdvance = useMutation(api.cafe.updateOrderStatus);
+  const convexResolve = useMutation(api.cafe.resolveServiceRequest);
+
+  const orders = convexOrders ?? [];
+  const payments = convexPayments ?? [];
+  const serviceRequests = convexRequests ?? [];
+
+  const verifiedToday = payments.filter((p) => p.status === "verified" && p.verifiedAt && p.verifiedAt > Date.now() - 86400000);
+  const revenueToday = verifiedToday.reduce((sum, p) => sum + p.amount, 0);
+  const ordersToday = orders.filter((o) => o._creationTime > Date.now() - 86400000).length;
+  const avgOrder = orders.length ? Math.round(orders.reduce((sum, o) => sum + o.total, 0) / orders.length) : 0;
+  const pendingVerifications = payments.filter((p) => p.status === "pending_verification").length;
 
   const stats = [
-    { label: "Today's Revenue", value: "₹24,580", change: "+12%", icon: DollarSign, color: "text-sage" },
-    { label: "Orders Today", value: "89", change: "+8%", icon: ShoppingBag, color: "text-gold" },
-    { label: "Avg. Order Value", value: "₹276", change: "+5%", icon: TrendingUp, color: "text-blue-500" },
-    { label: "Active Tables", value: "7/15", change: "", icon: Calendar, color: "text-purple-500" },
+    { label: "Today's Revenue", value: revenueToday > 0 ? `₹${revenueToday.toLocaleString("en-IN")}` : "₹0", change: `${ordersToday} order${ordersToday === 1 ? "" : "s"} today`, icon: DollarSign, color: "text-sage" },
+    { label: "Orders Today", value: `${ordersToday}`, change: "live", icon: ShoppingBag, color: "text-gold" },
+    { label: "Avg. Order Value", value: `₹${avgOrder}`, change: `${orders.length} total orders`, icon: TrendingUp, color: "text-blue-500" },
+    { label: "Pending Verifications", value: `${pendingVerifications}`, change: pendingVerifications > 0 ? "needs review" : "all clear", icon: Calendar, color: "text-purple-500" },
   ];
 
-  const liveOrders: BoardOrder[] = realOrders.length
-    ? realOrders
+  const liveOrders: BoardOrder[] = orders.length
+    ? orders
         .filter((o) => o.status !== "delivered" && o.status !== "cancelled")
         .map((o) => ({
-          id: o.id,
-          time: timeAgo(o.placedAt),
-          items: o.items.map((it) => `${it.name} × ${it.qty}`).join(", "),
+          id: o.orderNumber ?? o._id,
+          time: timeAgo(o._creationTime),
+          items: o.items.map((it) => `${it.name} × ${it.quantity}`).join(", "),
           total: o.total,
           status: (o.status === "pending" || o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
           table: o.tableNumber ?? "—",
@@ -112,11 +124,12 @@ function DashboardView() {
         table: o.table,
       }));
 
-  const advance = (id: string, status: BoardStatus) => {
-    if (!realOrders.length) return;
-    const nextIndex = ORDER_STATUS_ORDER.indexOf(status) + 1;
+  const advance = async (id: string, status: BoardStatus) => {
+    const order = orders.find((o) => (o.orderNumber ?? o._id) === id);
+    if (!order) return;
+    const nextIndex = ORDER_STATUS_ORDER.indexOf(order.status) + 1;
     const next = ORDER_STATUS_ORDER[Math.min(nextIndex, ORDER_STATUS_ORDER.length - 1)];
-    updateOrderStatus(id, next);
+    await convexAdvance({ id: order._id, status: next });
     toast.success(`Order ${id} moved to ${next}`);
   };
 
@@ -187,7 +200,7 @@ function DashboardView() {
                         <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{order.items}</p>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-sm">₹{order.total}</span>
-                          {col.key !== "ready" && realOrders.length > 0 && (
+                          {col.key !== "ready" && orders.length > 0 && (
                             <button
                               onClick={() => advance(order.id, order.status)}
                               className="flex items-center gap-1 text-[10px] font-bold text-gold bg-gold/10 px-2 py-1 rounded-lg hover:bg-gold/20 transition-all"
@@ -232,7 +245,7 @@ function DashboardView() {
                   ? req.type === "call-staff" ? "Staff called (done)" : `${req.type} (done)`
                   : req.type === "call-staff" ? "Staff called" : req.type;
                 return (
-                  <div key={req.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${req.resolved ? "border-border/40 opacity-60" : "border-dusty-rose/30 bg-dusty-rose/5"}`}>
+                  <div key={req._id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${req.resolved ? "border-border/40 opacity-60" : "border-dusty-rose/30 bg-dusty-rose/5"}`}>
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${req.resolved ? "bg-sage/10 text-sage" : "bg-dusty-rose/10 text-dusty-rose"}`}>
                       <Bell className="h-4 w-4" />
                     </div>
@@ -242,7 +255,7 @@ function DashboardView() {
                     </div>
                     {!req.resolved && (
                       <button
-                        onClick={() => { resolveServiceRequest(req.id); toast.success("Request marked complete"); }}
+                        onClick={() => { void convexResolve({ id: req._id }); toast.success("Request marked complete"); }}
                         className="flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2.5 py-1.5 rounded-lg hover:bg-sage/20 transition-all shrink-0"
                       >
                         <CheckCheck className="h-3 w-3" /> Done
@@ -275,20 +288,30 @@ function DashboardView() {
               </tr>
             </thead>
             <tbody>
-              {mockOrders.map((order) => (
-                <tr key={order.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-5 py-3 font-mono font-medium text-foreground">{order.id}</td>
-                  <td className="px-5 py-3 text-muted-foreground">#{order.table}</td>
-                  <td className="px-5 py-3 text-muted-foreground max-w-[200px] truncate">{order.items}</td>
-                  <td className="px-5 py-3 font-medium">₹{order.total}</td>
-                  <td className="px-5 py-3">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
-                      {order.status}
-                    </span>
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    No orders yet — they'll appear here the moment a customer places one.
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{order.time}</td>
                 </tr>
-              ))}
+              ) : (
+                orders.slice(0, 8).map((order) => (
+                  <tr key={order._id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3 font-mono font-medium text-foreground">{order.orderNumber ?? order._id}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{order.tableNumber ? `#${order.tableNumber}` : "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground max-w-[200px] truncate">
+                      {order.items.map((it) => `${it.name} × ${it.quantity}`).join(", ")}
+                    </td>
+                    <td className="px-5 py-3 font-medium">₹{order.total}</td>
+                    <td className="px-5 py-3">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{timeAgo(order._creationTime)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -426,20 +449,37 @@ function CategoriesView() {
 
 function OrdersView() {
   const [filter, setFilter] = useState<string>("all");
-  const filtered = filter === "all" ? mockOrders : mockOrders.filter((o) => o.status === filter);
+  const convexOrders = useQuery(api.cafe.listOrders);
+  const convexAdvance = useMutation(api.cafe.updateOrderStatus);
+  const orders = convexOrders ?? [];
+  const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+
+  const advance = (id: string, status: string) => {
+    const order = orders.find((o) => o._id === id);
+    if (!order) return;
+    const nextIndex = ORDER_STATUS_ORDER.indexOf(order.status) + 1;
+    const next = ORDER_STATUS_ORDER[Math.min(nextIndex, ORDER_STATUS_ORDER.length - 1)];
+    void convexAdvance({ id: order._id, status: next });
+    toast.success(`Order moved to ${next}`);
+  };
+
+  const cancel = (id: string) => {
+    const order = orders.find((o) => o._id === id);
+    if (!order) return;
+    void convexAdvance({ id: order._id, status: "cancelled" });
+    toast.success("Order cancelled");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Orders</h2>
-          <p className="text-sm text-muted-foreground">Manage all incoming orders</p>
+          <p className="text-sm text-muted-foreground">{orders.length} total · changes sync to the customer's tracker in real time</p>
         </div>
-        <button className="flex items-center gap-2 border border-border px-4 py-2 rounded-xl text-sm font-medium hover:bg-muted">
-          <Download className="h-4 w-4" /> Export
-        </button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {["all", "pending", "confirmed", "preparing", "ready", "delivered"].map((f) => (
+        {["all", "pending", "confirmed", "preparing", "ready", "delivered", "cancelled"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -452,45 +492,86 @@ function OrdersView() {
         ))}
       </div>
       <div className="space-y-3">
-        {filtered.map((order) => (
-          <div key={order.id} className="bg-white rounded-xl border border-border/50 p-4 flex items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-1">
-                <span className="font-mono font-bold text-sm">{order.id}</span>
-                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
-                  {order.status}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{order.items}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="font-bold text-sm">₹{order.total}</div>
-              <div className="text-xs text-muted-foreground">Table #{order.table}</div>
-            </div>
-            <div className="flex gap-1 shrink-0">
-              <button className="h-8 w-8 rounded-lg border flex items-center justify-center hover:bg-green-50 text-green-600">
-                <CheckCircle className="h-3.5 w-3.5" />
-              </button>
-              <button className="h-8 w-8 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500">
-                <XCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
+        {orders.length === 0 && filter === "all" ? (
+          <div className="bg-white rounded-xl border border-border/50 p-10 text-center">
+            <ShoppingBag className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No orders yet — they'll show up here the moment a customer checks out.</p>
           </div>
-        ))}
+        ) : filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-border/50 p-10 text-center">
+            <p className="text-sm text-muted-foreground">No {filter} orders.</p>
+          </div>
+        ) : (
+          filtered.map((order) => (
+            <div key={order._id} className="bg-white rounded-xl border border-border/50 p-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="font-mono font-bold text-sm">{order.orderNumber ?? order._id}</span>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
+                    {order.status}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{timeAgo(order._creationTime)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{order.items.map((it) => `${it.name} × ${it.quantity}`).join(", ")}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {order.orderType} · {order.tableNumber ? `Table #${order.tableNumber}` : "Takeaway"} · Payment: {order.paymentMethod} · {order.paymentStatus}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-bold text-sm">₹{order.total}</div>
+                {order.discount != null && order.discount > 0 && <div className="text-[10px] text-sage">-₹{order.discount} coupon</div>}
+              </div>
+              {order.status !== "delivered" && order.status !== "cancelled" && (
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => advance(order._id, order.status)}
+                    className="h-8 px-2.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold text-sage hover:bg-green-50 transition-all"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" /> {order.status === "ready" ? "Deliver" : "Advance"}
+                  </button>
+                  <button
+                    onClick={() => cancel(order._id)}
+                    className="h-8 w-8 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
 }
 
 function PaymentsView() {
+  const convexPayments = useQuery(api.cafe.listPayments);
+  const convexVerify = useMutation(api.cafe.verifyPayment);
+  const payments = convexPayments ?? [];
+
+  const verifiedTotal = payments.filter((p) => p.status === "verified").reduce((sum, p) => sum + p.amount, 0);
+  const pendingCount = payments.filter((p) => p.status === "pending_verification").length;
+  const failedCount = payments.filter((p) => p.status === "failed").length;
+
+  const statusBadge: Record<string, { label: string; cls: string }> = {
+    pending: { label: "Pending", cls: "bg-yellow-100 text-yellow-700" },
+    pending_verification: { label: "Awaiting Verification", cls: "bg-amber-100 text-amber-700" },
+    verified: { label: "Verified", cls: "bg-green-100 text-green-700" },
+    failed: { label: "Failed", cls: "bg-red-100 text-red-700" },
+  };
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Payments</h2>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Payments & Receipts</h2>
+        <p className="text-sm text-muted-foreground">Verify UPI payments using the customer's UTR and keep the receipts ledger.</p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: "Today's Revenue", value: "₹24,580", color: "text-sage" },
-          { label: "Pending Payments", value: "₹3,240", color: "text-yellow-600" },
-          { label: "Failed Payments", value: "₹0", color: "text-red-500" },
+          { label: "Verified Revenue", value: `₹${verifiedTotal.toLocaleString("en-IN")}`, color: "text-sage" },
+          { label: "Awaiting Verification", value: `${pendingCount}`, color: "text-amber-600" },
+          { label: "Failed Payments", value: `${failedCount}`, color: "text-red-500" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-2xl border border-border/50 p-5">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
@@ -498,10 +579,67 @@ function PaymentsView() {
           </div>
         ))}
       </div>
-      <div className="bg-white rounded-2xl border border-border/50 p-6 text-center py-16">
-        <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">Payment history will appear here once orders are placed.</p>
-      </div>
+
+      {payments.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-border/50 p-6 text-center py-16">
+          <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Payment records will appear here once orders are placed. Customers are asked for their UTR so you can verify instantly.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Receipt</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Order</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Amount</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Method</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">UTR</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Time</th>
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => (
+                <tr key={p._id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="px-5 py-3 font-mono font-medium">{p.receiptId}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.orderNumber ?? "—"}</td>
+                  <td className="px-5 py-3 font-medium">₹{p.amount}</td>
+                  <td className="px-5 py-3 capitalize text-muted-foreground">{p.method}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{p.utr ?? <span className="text-muted-foreground/50">—</span>}</td>
+                  <td className="px-5 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge[p.status]?.cls ?? "bg-muted"}`}>
+                      {statusBadge[p.status]?.label ?? p.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground text-xs">{timeAgo(p.paidAt)}</td>
+                  <td className="px-5 py-3">
+                    {p.status === "pending_verification" ? (
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => { void convexVerify({ id: p._id, verified: true }); toast.success(`${p.receiptId} verified`); }}
+                          className="text-[10px] font-bold text-sage bg-sage/10 px-2.5 py-1.5 rounded-lg hover:bg-sage/20 transition-all"
+                        >
+                          <CheckCheck className="h-3 w-3 inline mr-1" />Verify
+                        </button>
+                        <button
+                          onClick={() => { void convexVerify({ id: p._id, verified: false }); toast.error(`${p.receiptId} marked failed`); }}
+                          className="text-[10px] font-bold text-red-500 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100 transition-all"
+                        >
+                          <XCircle className="h-3 w-3 inline mr-1" />Fail
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -754,14 +892,35 @@ function ContentView() {
 }
 
 function AnalyticsView() {
+  const convexOrders = useQuery(api.cafe.listOrders);
+  const convexPayments = useQuery(api.cafe.listPayments);
+  const orders = convexOrders ?? [];
+  const payments = convexPayments ?? [];
+
+  const verifiedTotal = payments.filter((p) => p.status === "verified").reduce((sum, p) => sum + p.amount, 0);
+  const weekStart = Date.now() - 7 * 86400000;
+  const weeklyOrders = orders.filter((o) => o._creationTime > weekStart).length;
+
+  // Aggregate quantities across every placed order for the true top sellers.
+  const itemCounts = new Map<string, { name: string; qty: number; revenue: number }>();
+  orders.forEach((o) => {
+    o.items.forEach((it) => {
+      const cur = itemCounts.get(it.name) ?? { name: it.name, qty: 0, revenue: 0 };
+      cur.qty += it.quantity;
+      cur.revenue += it.price * it.quantity;
+      itemCounts.set(it.name, cur);
+    });
+  });
+  const topItems = [...itemCounts.values()].sort((a, b) => b.qty - a.qty).slice(0, 5);
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: "Weekly Revenue", value: "₹1,42,300", change: "+18% vs last week" },
-          { label: "Weekly Orders", value: "547", change: "+12% vs last week" },
-          { label: "Avg. Rating", value: "4.8 ★", change: "Based on 312 reviews" },
+          { label: "Verified Revenue (all time)", value: `₹${verifiedTotal.toLocaleString("en-IN")}`, change: `${payments.length} payment records` },
+          { label: "Orders (7 days)", value: `${weeklyOrders}`, change: `${orders.length} total orders` },
+          { label: "Avg. Order Value", value: `₹${orders.length ? Math.round(orders.reduce((sum, o) => sum + o.total, 0) / orders.length) : 0}`, change: "Across all orders" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-2xl border border-border/50 p-5">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
@@ -772,18 +931,26 @@ function AnalyticsView() {
       </div>
       <div className="bg-white rounded-2xl border border-border/50 p-6">
         <h3 className="font-semibold mb-4">Top Selling Items</h3>
-        <div className="space-y-3">                    {products.filter((p) => p.badge === "bestseller" || p.bestSeller).slice(0, 5).map((p, i) => (
-            <div key={p.id} className="flex items-center gap-4">
-              <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}.</span>
-              <img src={p.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
-              <div className="flex-1">
-                <div className="text-sm font-medium">{p.name}</div>
-                <div className="text-xs text-muted-foreground">{categories.find((c) => c.id === p.category)?.name}</div>
-              </div>
-              <span className="font-bold text-sm">₹{p.price}</span>
-            </div>
-          ))}
-        </div>
+        {topItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Order data will appear here as customers place orders.</p>
+        ) : (
+          <div className="space-y-3">
+            {topItems.map((item, i) => {
+              const product = products.find((p) => p.name === item.name);
+              return (
+                <div key={item.name} className="flex items-center gap-4">
+                  <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}.</span>
+                  {product && <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{item.name}</div>
+                    <div className="text-xs text-muted-foreground">{item.qty} sold · ₹{item.revenue}</div>
+                  </div>
+                  <span className="font-bold text-sm">× {item.qty}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

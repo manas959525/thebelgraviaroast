@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChefHat, Clock, Package, MapPin, ArrowRight, RotateCcw } from "lucide-react";
+import { Check, ChefHat, Clock, Package, MapPin, ArrowRight, RotateCcw, ShieldCheck, Hourglass } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { addToCart } from "@/lib/cart";
 import { products } from "@/data/menu";
-import { getOrderById, ORDER_STATUS_ORDER, type OrderStatus } from "@/lib/orders";
+import { getOrderById, type OrderStatus } from "@/lib/orders";
 import { toast } from "sonner";
+
+const DB_STATUS_INDEX: Record<string, number> = {
+  pending: 0,
+  confirmed: 1,
+  preparing: 2,
+  ready: 3,
+  delivered: 4,
+  cancelled: 0,
+};
 
 const stepMeta: { label: string; icon: typeof Check; desc: string }[] = [
   { label: "Order Received", icon: Check, desc: "We've received your order" },
@@ -33,19 +44,29 @@ export default function TrackOrder() {
   const tableNumber = state?.tableNumber || storedOrder?.tableNumber;
   const total = state?.total ?? storedOrder?.total ?? 0;
 
-  // Live simulation: starts mid-progress and advances every few seconds.
-  const [stepIndex, setStepIndex] = useState(2);
+  // Live status from the café database (reactive — updates when the kitchen advances it).
+  const live = useQuery(api.cafe.getOrderByNumber, { orderNumber: orderId });
+  const liveStep = live?.order ? (DB_STATUS_INDEX[live.order.status] ?? 2) : null;
+
+  // Live simulation fallback for orders not yet in the database.
+  const [simStep, setSimStep] = useState(2);
 
   useEffect(() => {
+    if (liveStep !== null) return;
     const t = setInterval(() => {
-      setStepIndex((s) => Math.min(s + 1, stepMeta.length - 1));
+      setSimStep((s) => Math.min(s + 1, stepMeta.length - 1));
     }, 12000);
     return () => clearInterval(t);
-  }, []);
+  }, [liveStep]);
 
-  const statusLabel = stepMeta[stepIndex].label;
+  const stepIndex = liveStep ?? simStep;
+  const cancelled = live?.order?.status === "cancelled";
+
+  const statusLabel = cancelled ? "Cancelled" : stepMeta[stepIndex].label;
   const progress = (stepIndex / (stepMeta.length - 1)) * 100;
-  const currentStatus: OrderStatus = ORDER_STATUS_ORDER[stepIndex] ?? "ready";
+  const currentStatus: OrderStatus = (live?.order?.status as OrderStatus) ?? (["pending", "confirmed", "preparing", "ready", "delivered"] as const)[stepIndex] ?? "ready";
+  const paymentVerified = live?.payment?.status === "verified";
+  const paymentPendingVerification = live?.payment?.status === "pending_verification";
 
   const handleRepeat = () => {
     let added = 0;
@@ -83,8 +104,7 @@ export default function TrackOrder() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="bg-white rounded-2xl border border-border/50 p-6 mb-6"
-          >
-            <div className="flex items-center justify-between mb-6">
+          >              <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <AnimatePresence mode="wait">
@@ -101,8 +121,18 @@ export default function TrackOrder() {
                   </AnimatePresence>
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {stepIndex >= stepMeta.length - 1 ? "It's on its way to you" : `Estimated time: ${Math.max(2, 12 - stepIndex * 3)}–${Math.max(5, 15 - stepIndex * 3)} minutes`}
+                  {cancelled ? "This order was cancelled — please contact the café." : stepIndex >= stepMeta.length - 1 ? "It's on its way to you" : `Estimated time: ${Math.max(2, 12 - stepIndex * 3)}–${Math.max(5, 15 - stepIndex * 3)} minutes`}
                 </p>
+                {paymentPendingVerification && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-2">
+                    <Hourglass className="h-3 w-3" /> Payment awaiting verification
+                  </span>
+                )}
+                {paymentVerified && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2 py-0.5 rounded-full mt-2">
+                    <ShieldCheck className="h-3 w-3" /> Payment verified
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1.5 bg-gold/10 px-3 py-1.5 rounded-full">
                 <Clock className="h-3.5 w-3.5 text-gold" />

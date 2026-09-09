@@ -8,6 +8,7 @@ const footerLinks = {
     { to: "/menu?cat=coffee", label: "Signature Coffee" },
     { to: "/menu?cat=cold-coffee", label: "Cold Coffee" },
     { to: "/offers", label: "Current Offers" },
+    { to: "/build-your-drink", label: "Build Your Drink" },
     { to: "/table-ordering", label: "Table Ordering" },
   ],
   company: [

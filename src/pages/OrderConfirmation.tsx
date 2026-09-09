@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw } from "lucide-react";
+import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw, Printer, Receipt, ShieldCheck, Hourglass } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { products } from "@/data/menu";
@@ -24,6 +24,10 @@ interface ConfirmationState {
   tableNumber?: string;
   guestName?: string;
   paymentMethod?: string;
+  paymentStatus?: string;
+  utr?: string;
+  receiptId?: string;
+  dbOrderId?: string;
   items?: OrderLineItem[];
 }
 
@@ -103,8 +107,17 @@ export default function OrderConfirmation() {
             className="bg-white rounded-2xl border border-border/50 p-6 mb-8 text-left"
           >
             <div className="flex items-center justify-between mb-4 pb-4 border-b">
-              <span className="text-sm text-muted-foreground">Order ID</span>
-              <span className="font-mono font-bold text-foreground">{orderId}</span>
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-gold" />
+                <div className="text-left">
+                  <div className="text-sm text-muted-foreground">Receipt</div>
+                  <div className="font-mono font-bold text-foreground">{state?.receiptId ?? `RCPT-${orderId.replace(/^TBR-/, "").slice(0, 8)}`}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Order</div>
+                <div className="font-mono font-bold text-foreground">{orderId}</div>
+              </div>
             </div>
 
             {items.length > 0 && (
@@ -145,11 +158,40 @@ export default function OrderConfirmation() {
                   <span className="font-medium">#{state.tableNumber}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment</span>
+                <span className="font-medium capitalize">{state?.paymentMethod || "—"}</span>
+              </div>
+              {state?.utr && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">UTR / Reference</span>
+                  <span className="font-mono font-medium text-foreground">{state.utr}</span>
+                </div>
+              )}
+              {state?.paymentStatus && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Payment Status</span>
+                  <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
+                    state.paymentStatus === "paid" ? "bg-sage/10 text-sage" : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {state.paymentStatus === "paid" ? <ShieldCheck className="h-3 w-3" /> : <Hourglass className="h-3 w-3" />}
+                    {state.paymentStatus === "paid" ? "Paid & Verified" : "Awaiting verification"}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between border-t pt-3">
-                <span className="font-semibold">Total Paid</span>
+                <span className="font-semibold">Total</span>
                 <span className="font-bold text-lg">₹{total}</span>
               </div>
             </div>
+
+            {/* Print receipt */}
+            <button
+              onClick={() => window.print()}
+              className="mt-5 w-full flex items-center justify-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-muted transition-all"
+            >
+              <Printer className="h-4 w-4" /> Print Receipt
+            </button>
           </motion.div>
 
           {items.length > 0 && (

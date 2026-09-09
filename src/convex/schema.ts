@@ -71,9 +71,11 @@ const schema = defineSchema(
 
     orders: defineTable({
       userId: v.optional(v.id("users")),
+      orderNumber: v.optional(v.string()),
       items: v.array(
         v.object({
-          productId: v.id("products"),
+          // Catalog product key (slug/id from the static menu), not a Convex row id.
+          productId: v.string(),
           name: v.string(),
           price: v.number(),
           quantity: v.number(),
@@ -81,6 +83,9 @@ const schema = defineSchema(
           addOns: v.optional(v.array(v.string())),
         }),
       ),
+      subtotal: v.optional(v.number()),
+      tax: v.optional(v.number()),
+      discount: v.optional(v.number()),
       total: v.number(),
       status: v.union(
         v.literal("pending"),
@@ -106,7 +111,32 @@ const schema = defineSchema(
         v.literal("takeaway"),
         v.literal("delivery"),
       ),
-    }).index("by_user", ["userId"]).index("by_status", ["status"]),
+    }).index("by_user", ["userId"]).index("by_status", ["status"]).index("by_orderNumber", ["orderNumber"]),
+
+    payments: defineTable({
+      orderId: v.id("orders"),
+      orderNumber: v.optional(v.string()),
+      amount: v.number(),
+      method: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("pending_verification"),
+        v.literal("verified"),
+        v.literal("failed"),
+      ),
+      utr: v.optional(v.string()),
+      receiptId: v.string(),
+      paidAt: v.number(),
+      verifiedAt: v.optional(v.number()),
+    }).index("by_order", ["orderId"]).index("by_status", ["status"]),
+
+    serviceRequests: defineTable({
+      table: v.string(),
+      type: v.string(),
+      note: v.optional(v.string()),
+      resolved: v.boolean(),
+      createdAt: v.number(),
+    }).index("by_resolved", ["resolved"]),
 
     tables: defineTable({
       number: v.number(),
