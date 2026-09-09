@@ -695,8 +695,6 @@ function PaymentsView() {
   );
 }
 
-type TableStatus = "available" | "occupied" | "reserved" | "bill-requested";
-
 function TablesView() {
   const dbTables = useQuery(api.cafe.listTables);
   const setStatusMutation = useMutation(api.cafe.setTableStatus);
@@ -890,7 +888,6 @@ function TablesView() {
   );
 }
 
-const TABLE_COUNT = 12;
 const TABLE_QR_URL = (n: number) =>
   `${typeof window !== "undefined" ? window.location.origin : "https://thebelgraviaroast.in"}/table-ordering?table=${n}`;
 
@@ -909,16 +906,20 @@ function downloadQrSvg(table: number) {
 }
 
 function QRGeneratorView() {
+  useSeededCafe();
+  const dbTables = useQuery(api.cafe.listTables);
+  const tableNumbers = (dbTables ?? []).map((t) => t.number).sort((a, b) => a - b);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Table QR Codes</h2>
-          <p className="text-sm text-muted-foreground mt-1">Each QR opens table ordering with the table pre-filled — print and place them on every table.</p>
+          <p className="text-sm text-muted-foreground mt-1">Each QR opens table ordering with the table pre-filled — print and place them on every table. Tables come from the Tables screen.</p>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { Array.from({ length: TABLE_COUNT }, (_, i) => downloadQrSvg(i + 1)); toast.success(`Downloaded ${TABLE_COUNT} QR codes`); }}
+            onClick={() => { tableNumbers.forEach((n) => downloadQrSvg(n)); if (tableNumbers.length) toast.success(`Downloaded ${tableNumbers.length} QR codes`); }}
             className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
           >
             <Download className="h-4 w-4" /> Generate All QR Codes
@@ -926,8 +927,15 @@ function QRGeneratorView() {
         </div>
       </div>
 
+      {dbTables !== undefined && tableNumbers.length === 0 && (
+        <div className="bg-white rounded-2xl border border-border/50 p-10 text-center">
+          <QrCode className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No tables yet — add tables in the Tables screen and they'll appear here.</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((n) => {
+        {tableNumbers.map((n) => {
           const url = TABLE_QR_URL(n);
           return (
             <div key={n} className="bg-white rounded-2xl border border-border/50 p-6 text-center hover:shadow-md transition-all">
@@ -1127,13 +1135,91 @@ function OffersView() {
 }
 
 function ContentView() {
+  const dbReviews = useQuery(api.cafe.listAllReviews);
+  const approveReview = useMutation(api.cafe.setReviewApproval);
+  const deleteReviewMutation = useMutation(api.cafe.deleteReview);
+
+  const pending = (dbReviews ?? []).filter((r) => !r.approved);
+  const approved = (dbReviews ?? []).filter((r) => r.approved);
+
+  const ReviewCard = ({ r }: { r: (NonNullable<typeof dbReviews>)[0] }) => (
+    <div className={`rounded-xl border p-4 ${r.approved ? "border-border/50" : "border-amber-200 bg-amber-50/40"}`}>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">{r.name}</span>
+            <span className="flex gap-0.5">
+              {Array.from({ length: r.rating }).map((_, i) => (
+                <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+              ))}
+            </span>
+          </div>
+          {r.orderNumber && <span className="text-[10px] font-mono text-muted-foreground">{r.orderNumber}</span>}
+        </div>
+        <span className="text-[10px] text-muted-foreground shrink-0">{timeAgo(r.createdAt)}</span>
+      </div>
+      <p className="text-sm text-muted-foreground mb-3">{r.text}</p>
+      <div className="flex gap-2">
+        {r.approved ? (
+          <button
+            onClick={() => { void approveReview({ id: r._id, approved: false }); toast.success("Review hidden from the site"); }}
+            className="text-[10px] font-bold px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-all"
+          >
+            Unpublish
+          </button>
+        ) : (
+          <button
+            onClick={() => { void approveReview({ id: r._id, approved: true }); toast.success("Review published to the landing page"); }}
+            className="flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2.5 py-1.5 rounded-lg hover:bg-sage/20 transition-all"
+          >
+            <CheckCheck className="h-3 w-3" /> Approve & Publish
+          </button>
+        )}
+        <button
+          onClick={() => { void deleteReviewMutation({ id: r._id }); toast.success("Review deleted"); }}
+          className="text-[10px] font-bold text-red-500 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100 transition-all"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Customer Content</h2>
-      <p className="text-sm text-muted-foreground">Review and moderate customer-uploaded photos and reviews.</p>
-      <div className="bg-white rounded-2xl border border-border/50 p-16 text-center">
-        <Star className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">No customer submissions yet. They'll appear here once guests start sharing.</p>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Customer Reviews</h2>
+        <p className="text-sm text-muted-foreground">Guests review their order right after checkout. Approved reviews appear on the landing page.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <h3 className="font-semibold flex items-center gap-2">
+            Awaiting moderation
+            {pending.length > 0 && (
+              <span className="text-[10px] font-bold bg-dusty-rose text-white px-2 py-0.5 rounded-full">{pending.length}</span>
+            )}
+          </h3>
+          {dbReviews === undefined ? (
+            <div className="flex items-center justify-center py-8"><div className="h-5 w-5 border-2 border-gold/30 border-t-gold rounded-full animate-spin" /></div>
+          ) : pending.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-border/50 p-10 text-center">
+              <Star className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No reviews waiting — you're all caught up.</p>
+            </div>
+          ) : (
+            pending.map((r) => <ReviewCard key={r._id} r={r} />)
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="font-semibold">Published ({approved.length})</h3>
+          {approved.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Approved reviews will be listed here.</p>
+          ) : (
+            approved.map((r) => <ReviewCard key={r._id} r={r} />)
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1184,7 +1270,7 @@ function AnalyticsView() {
         ) : (
           <div className="space-y-3">
             {topItems.map((item, i) => {
-              const product = products.find((p) => p.name === item.name);
+              const product = staticProducts.find((p) => p.name === item.name);
               return (
                 <div key={item.name} className="flex items-center gap-4">
                   <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}.</span>
@@ -1205,34 +1291,64 @@ function AnalyticsView() {
 }
 
 function SettingsView() {
+  useSeededCafe();
+  const settings = useQuery(api.cafe.listSettings);
+  const saveSettings = useMutation(api.cafe.saveSettings);
+  const [form, setForm] = useState<Record<string, string> | null>(null);
+  const value = (key: string) => form?.[key] ?? settings?.[key] ?? "";
+  const set = (key: string, v: string) => setForm({ ...(form ?? settings ?? {}), [key]: v });
+  const fields: { key: string; label: string; hint?: string; wide?: boolean }[] = [
+    { key: "cafeName", label: "Café Name" },
+    { key: "tagline", label: "Tagline" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "address", label: "Address", wide: true },
+    { key: "upiId", label: "UPI ID", hint: "Used for the payment QR and UPI deep links" },
+    { key: "taxRate", label: "Tax Rate (%)", hint: "Applied at checkout" },
+    { key: "openTime", label: "Opens At" },
+    { key: "closeTime", label: "Closes At" },
+    { key: "avgPrepMinutes", label: "Avg. Prep Time (min)", hint: "Shown on the homepage status strip" },
+  ];
+  const save = () => {
+    if (!form) return;
+    void saveSettings({ values: Object.entries(form).map(([key, v]) => ({ key, value: v })) });
+    toast.success("Settings saved — live across the whole site");
+    setForm(null);
+  };
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">Settings</h2>
       <div className="bg-white rounded-2xl border border-border/50 p-6 space-y-6">
         <div>
           <h3 className="font-semibold text-foreground mb-1">Café Information</h3>
-          <p className="text-xs text-muted-foreground mb-4">Basic details about your café</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Café Name</label>
-              <input defaultValue="The Belgravia Roast" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
+          <p className="text-xs text-muted-foreground mb-4">
+            These details power the footer, contact pages, payment screen and UPI QR — saved to the café database, applied site-wide.
+          </p>
+          {settings === undefined ? (
+            <div className="flex items-center justify-center py-8"><div className="h-5 w-5 border-2 border-gold/30 border-t-gold rounded-full animate-spin" /></div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {fields.map((f) => (
+                <div key={f.key} className={f.wide ? "sm:col-span-2" : ""}>
+                  <label className="text-sm font-medium">{f.label}</label>
+                  {f.hint && <span className="text-[10px] text-muted-foreground block">{f.hint}</span>}
+                  <input
+                    value={value(f.key)}
+                    onChange={(e) => set(f.key, e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold"
+                  />
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="text-sm font-medium">Phone</label>
-              <input defaultValue="+91 98765 43210" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Email</label>
-              <input defaultValue="hello@thebelgraviaroast.in" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Address</label>
-              <input defaultValue="42 Belgravia Lane, New Delhi 110001" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold" />
-            </div>
-          </div>
+          )}
         </div>
-        <div className="flex justify-end">
-          <button className="bg-gold text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all">
+        <div className="flex items-center justify-between">
+          {form && <span className="text-xs text-amber-600">Unsaved changes</span>}
+          <button
+            onClick={save}
+            disabled={!form}
+            className="ml-auto bg-gold text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             Save Changes
           </button>
         </div>
