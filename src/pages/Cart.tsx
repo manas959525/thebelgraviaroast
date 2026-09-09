@@ -1,12 +1,15 @@
 import { Link } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useCart, updateQuantity, removeFromCart, clearCart } from "@/lib/cart";
+import { useCart, updateQuantity, removeFromCart, clearCart, addToCart } from "@/lib/cart";
+import { getComplements } from "@/lib/cafe";
+import { toast } from "sonner";
 
 export default function CartPage() {
   const { items, total, count } = useCart();
+  const suggestions = items.length ? getComplements(items[0].product, 2) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,6 +43,37 @@ export default function CartPage() {
                     Clear Cart
                   </button>
                 </div>
+
+                {/* Perfect-with suggestions */}
+                {suggestions.length > 0 && (
+                  <div className="bg-warm-gradient rounded-2xl border border-border/50 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="h-4 w-4 text-dusty-rose" />
+                      <h3 className="text-sm font-bold text-foreground">Perfect with your {items[0]?.product.name}</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {suggestions.map((item) => (
+                        <div key={item.id} className="bg-white rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                          <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <Link to={`/menu/${item.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
+                              {item.name}
+                            </Link>
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>
+                            <div className="font-bold text-foreground mt-1 text-sm">₹{item.discountPrice ?? item.price}</div>
+                          </div>
+                          <button
+                            onClick={() => { addToCart(item, 1); toast.success(`${item.name} added to cart`); }}
+                            className="h-8 w-8 rounded-lg bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all shrink-0"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-3">Tip: pair your drink with a bite — combos save you up to ₹100.</p>
+                  </div>
+                )}
                 <AnimatePresence>
                   {items.map((item, index) => {
                     const price = item.product.discountPrice ?? item.product.price;

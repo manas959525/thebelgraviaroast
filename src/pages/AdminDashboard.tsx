@@ -5,10 +5,18 @@ import {
   CheckCircle, XCircle, Eye, Edit, Trash2, Plus,
   QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
+  Bell, CheckCheck, Copy, Printer,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { categories, products } from "@/data/menu";
+import { daypartGreeting } from "@/lib/cafe";
+import {
+  resolveServiceRequest, timeAgo, useOrders, useServiceRequests,
+  updateOrderStatus, ORDER_STATUS_ORDER,
+} from "@/lib/orders";
+import { toast } from "sonner";
 
 type AdminSection =
   | "dashboard"
@@ -56,7 +64,27 @@ const statusColors = {
   cancelled: "bg-red-100 text-red-700",
 };
 
+type BoardStatus = "pending" | "preparing" | "ready";
+
+interface BoardOrder {
+  id: string;
+  time: string;
+  items: string;
+  total: number;
+  status: BoardStatus;
+  table: number | string;
+}
+
+const boardColumns: { key: BoardStatus; label: string; dot: string }[] = [
+  { key: "pending", label: "NEW", dot: "bg-yellow-400" },
+  { key: "preparing", label: "PREPARING", dot: "bg-orange-400" },
+  { key: "ready", label: "READY", dot: "bg-green-400" },
+];
+
 function DashboardView() {
+  const realOrders = useOrders();
+  const serviceRequests = useServiceRequests();
+
   const stats = [
     { label: "Today's Revenue", value: "₹24,580", change: "+12%", icon: DollarSign, color: "text-sage" },
     { label: "Orders Today", value: "89", change: "+8%", icon: ShoppingBag, color: "text-gold" },
@@ -64,11 +92,39 @@ function DashboardView() {
     { label: "Active Tables", value: "7/15", change: "", icon: Calendar, color: "text-purple-500" },
   ];
 
+  const liveOrders: BoardOrder[] = realOrders.length
+    ? realOrders
+        .filter((o) => o.status !== "delivered" && o.status !== "cancelled")
+        .map((o) => ({
+          id: o.id,
+          time: timeAgo(o.placedAt),
+          items: o.items.map((it) => `${it.name} × ${it.qty}`).join(", "),
+          total: o.total,
+          status: (o.status === "pending" || o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
+          table: o.tableNumber ?? "—",
+        }))
+    : mockOrders.filter((o) => o.status === "pending" || o.status === "confirmed" || o.status === "preparing" || o.status === "ready").map((o) => ({
+        id: o.id,
+        time: o.time,
+        items: o.items,
+        total: o.total,
+        status: (o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
+        table: o.table,
+      }));
+
+  const advance = (id: string, status: BoardStatus) => {
+    if (!realOrders.length) return;
+    const nextIndex = ORDER_STATUS_ORDER.indexOf(status) + 1;
+    const next = ORDER_STATUS_ORDER[Math.min(nextIndex, ORDER_STATUS_ORDER.length - 1)];
+    updateOrderStatus(id, next);
+    toast.success(`Order ${id} moved to ${next}`);
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">Overview of today's operations</p>
+        <h2 className="text-2xl font-bold text-foreground">{daypartGreeting()}, Admin 👋</h2>
+        <p className="text-sm text-muted-foreground">Today's overview at a glance</p>
       </div>
 
       {/* Stats Grid */}
@@ -92,6 +148,112 @@ function DashboardView() {
             </div>
           );
         })}
+      </div>
+
+      {/* Live Orders Board */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="font-semibold text-foreground">Live Orders</h3>
+          <span className="flex items-center gap-1.5 text-[10px] font-bold text-sage bg-sage/10 px-2 py-0.5 rounded-full">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-sage" />
+            </span>
+            LIVE
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {boardColumns.map((col) => {
+            const colOrders = liveOrders.filter((o) => o.status === col.key);
+            return (
+              <div key={col.key} className="bg-white rounded-2xl border border-border/50 p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{col.label}</span>
+                  <span className="ml-auto text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{colOrders.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {colOrders.length === 0 ? (
+                    <div className="text-center text-xs text-muted-foreground py-6 border border-dashed border-border rounded-xl">
+                      No orders here
+                    </div>
+                  ) : (
+                    colOrders.map((order) => (
+                      <div key={order.id} className="rounded-xl border border-border/60 p-3 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono font-bold text-xs">{order.id}</span>
+                          <span className="text-[10px] text-muted-foreground">T#{order.table} · {order.time}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{order.items}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm">₹{order.total}</span>
+                          {col.key !== "ready" && realOrders.length > 0 && (
+                            <button
+                              onClick={() => advance(order.id, order.status)}
+                              className="flex items-center gap-1 text-[10px] font-bold text-gold bg-gold/10 px-2 py-1 rounded-lg hover:bg-gold/20 transition-all"
+                            >
+                              <CheckCheck className="h-3 w-3" /> Advance
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Service Requests */}
+      <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Bell className="h-4 w-4 text-dusty-rose" />
+            Service Requests
+            {serviceRequests.filter((r) => !r.resolved).length > 0 && (
+              <span className="text-[10px] font-bold bg-dusty-rose text-white px-2 py-0.5 rounded-full">
+                {serviceRequests.filter((r) => !r.resolved).length} new
+              </span>
+            )}
+          </h3>
+          <span className="text-xs text-muted-foreground">From table-side ordering</span>
+        </div>
+        <div className="p-5">
+          {serviceRequests.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-6">
+              No requests yet — they'll appear the moment a guest taps one on the table-ordering page.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {serviceRequests.slice(0, 8).map((req) => {
+                const label = req.resolved
+                  ? req.type === "call-staff" ? "Staff called (done)" : `${req.type} (done)`
+                  : req.type === "call-staff" ? "Staff called" : req.type;
+                return (
+                  <div key={req.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${req.resolved ? "border-border/40 opacity-60" : "border-dusty-rose/30 bg-dusty-rose/5"}`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${req.resolved ? "bg-sage/10 text-sage" : "bg-dusty-rose/10 text-dusty-rose"}`}>
+                      <Bell className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium capitalize text-foreground">Table #{req.table} — {label}</div>
+                      <div className="text-xs text-muted-foreground">{timeAgo(req.createdAt)}</div>
+                    </div>
+                    {!req.resolved && (
+                      <button
+                        onClick={() => { resolveServiceRequest(req.id); toast.success("Request marked complete"); }}
+                        className="flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2.5 py-1.5 rounded-lg hover:bg-sage/20 transition-all shrink-0"
+                      >
+                        <CheckCheck className="h-3 w-3" /> Done
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recent Orders */}
@@ -344,14 +506,39 @@ function PaymentsView() {
   );
 }
 
+type TableStatus = "available" | "occupied" | "reserved" | "bill-requested";
+
 function TablesView() {
-  const tables = Array.from({ length: 15 }, (_, i) => ({
-    number: i + 1,
-    capacity: [2, 2, 4, 4, 4, 6, 6, 8, 2, 4, 4, 6, 2, 4, 8][i],
-    status: (["available", "occupied", "reserved", "available", "available", "occupied", "available", "available", "reserved", "available", "occupied", "available", "available", "available", "available"] as const)[i],
-    section: i < 5 ? "Indoor" : i < 10 ? "Terrace" : "Private",
-  }));
-  const statusStyle = { available: "bg-green-100 border-green-300 text-green-700", occupied: "bg-red-100 border-red-300 text-red-700", reserved: "bg-yellow-100 border-yellow-300 text-yellow-700" };
+  const [tables, setTables] = useState(() =>
+    Array.from({ length: 15 }, (_, i) => ({
+      number: i + 1,
+      capacity: [2, 2, 4, 4, 4, 6, 6, 8, 2, 4, 4, 6, 2, 4, 8][i],
+      status: (["available", "occupied", "reserved", "available", "available", "occupied", "available", "available", "bill-requested", "available", "occupied", "available", "available", "available", "available"] as TableStatus[])[i],
+      section: i < 5 ? "Indoor" : i < 10 ? "Terrace" : "Private",
+    })),
+  );
+  const [selected, setSelected] = useState<number | null>(null);
+
+  const statusStyle: Record<TableStatus, string> = {
+    available: "bg-green-100 border-green-300 text-green-700",
+    occupied: "bg-red-100 border-red-300 text-red-700",
+    reserved: "bg-yellow-100 border-yellow-300 text-yellow-700",
+    "bill-requested": "bg-blue-100 border-blue-300 text-blue-700",
+  };
+  const statusLabel: Record<TableStatus, string> = {
+    available: "Available",
+    occupied: "Occupied",
+    reserved: "Reserved",
+    "bill-requested": "Bill Requested",
+  };
+
+  const selectedTable = tables.find((t) => t.number === selected) ?? null;
+
+  const setStatus = (number: number, status: TableStatus) => {
+    setTables((prev) => prev.map((t) => (t.number === number ? { ...t, status } : t)));
+    toast.success(`Table #${number} marked ${statusLabel[status].toLowerCase()}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -363,36 +550,138 @@ function TablesView() {
           <Plus className="h-4 w-4" /> Add Table
         </button>
       </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {(Object.keys(statusLabel) as TableStatus[]).map((s) => (
+          <span key={s} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${statusStyle[s].split(" ")[0].replace("bg-", "bg-")}`} />
+            {statusLabel[s]}
+          </span>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {tables.map((t) => (
-          <div key={t.number} className={`rounded-xl border-2 p-4 text-center cursor-pointer hover:shadow-md transition-all ${statusStyle[t.status]}`}>
+          <button
+            key={t.number}
+            onClick={() => setSelected(t.number)}
+            className={`rounded-xl border-2 p-4 text-center transition-all ${statusStyle[t.status]} ${selected === t.number ? "ring-2 ring-gold ring-offset-2" : "hover:shadow-md"}`}
+          >
             <div className="text-2xl font-bold mb-1">#{t.number}</div>
             <div className="text-xs">{t.capacity} seats</div>
             <div className="text-[10px] font-medium uppercase mt-1">{t.section}</div>
-            <div className="text-[10px] font-bold uppercase mt-2">{t.status}</div>
-          </div>
+            <div className="text-[10px] font-bold uppercase mt-2">{statusLabel[t.status]}</div>
+          </button>
         ))}
       </div>
+
+      {/* Selected table detail */}
+      {selectedTable && (
+        <div className="bg-white rounded-2xl border border-border/50 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Table #{selectedTable.number}</h3>
+              <p className="text-xs text-muted-foreground">{selectedTable.capacity} seats · {selectedTable.section} · {statusLabel[selectedTable.status]}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
+              <button onClick={() => setStatus(selectedTable.number, "available")} className="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 transition-all">Mark Available</button>
+              <button onClick={() => setStatus(selectedTable.number, "occupied")} className="text-xs font-semibold bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-all">Mark Occupied</button>
+              <button onClick={() => setStatus(selectedTable.number, "reserved")} className="text-xs font-semibold bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-lg hover:bg-yellow-200 transition-all">Reserve</button>
+              <button onClick={() => setStatus(selectedTable.number, "bill-requested")} className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-all">Bill Requested</button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <button onClick={() => toast.success(`Staff notified for Table #${selectedTable.number}`)} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+              <Bell className="h-3.5 w-3.5 text-dusty-rose" /> Call Staff
+            </button>
+            <Link to="/table-ordering" className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+              <QrCode className="h-3.5 w-3.5 text-gold" /> Table QR & Ordering
+            </Link>
+            <button onClick={() => toast.success(`Bill requested for Table #${selectedTable.number}`)} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+              <DollarSign className="h-3.5 w-3.5 text-sage" /> Request Bill
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+const TABLE_COUNT = 12;
+const TABLE_QR_URL = (n: number) =>
+  `${typeof window !== "undefined" ? window.location.origin : "https://thebelgraviaroast.in"}/table-ordering?table=${n}`;
+
+function downloadQrSvg(table: number) {
+  const el = document.getElementById(`table-qr-${table}`);
+  if (!el) return;
+  const svg = el.outerHTML;
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `belgravia-table-${table}.svg`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success(`Table ${table} QR downloaded`);
 }
 
 function QRGeneratorView() {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">QR Code Generator</h2>
-      <p className="text-sm text-muted-foreground">Generate unique QR codes for each table that link directly to the table ordering page.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Table QR Codes</h2>
+          <p className="text-sm text-muted-foreground mt-1">Each QR opens table ordering with the table pre-filled — print and place them on every table.</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { Array.from({ length: TABLE_COUNT }, (_, i) => downloadQrSvg(i + 1)); toast.success(`Downloaded ${TABLE_COUNT} QR codes`); }}
+            className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
+          >
+            <Download className="h-4 w-4" /> Generate All QR Codes
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-border/50 p-6 text-center">
-            <div className="w-40 h-40 mx-auto bg-muted rounded-xl flex items-center justify-center mb-3">
-              <QrCode className="h-20 w-20 text-muted-foreground/30" />
+        {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((n) => {
+          const url = TABLE_QR_URL(n);
+          return (
+            <div key={n} className="bg-white rounded-2xl border border-border/50 p-6 text-center hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground/70">Table #{n}</span>
+                <span className="flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2 py-0.5 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Active
+                </span>
+              </div>
+              <div className="w-40 h-40 mx-auto bg-white rounded-xl border border-border/60 flex items-center justify-center mb-3 p-2">
+                <QRCodeSVG id={`table-qr-${n}`} value={url} size={140} level="M" />
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-4 break-all">{url}</p>
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => downloadQrSvg(n)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-gold bg-gold/10 px-3 py-1.5 rounded-lg hover:bg-gold/20 transition-all"
+                >
+                  <Download className="h-3 w-3" /> Download
+                </button>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(url).catch(() => {}); toast.success(`Table ${n} link copied`); }}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-all"
+                >
+                  <Copy className="h-3 w-3" /> Copy Link
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-all"
+                >
+                  <Printer className="h-3 w-3" /> Print
+                </button>
+              </div>
             </div>
-            <h4 className="font-semibold">Table #{i + 1}</h4>
-            <p className="text-xs text-muted-foreground mb-3">belgraviaroast.in/table/{i + 1}</p>
-            <button className="text-xs text-gold font-medium hover:underline">Download QR</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

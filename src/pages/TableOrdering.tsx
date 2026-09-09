@@ -1,16 +1,28 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
-import { QrCode, ShoppingCart, Coffee, Check } from "lucide-react";
+import { QrCode, ShoppingCart, Coffee, Check, Bell, Droplets, Utensils, Receipt, Brush, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";
 import { addToCart } from "@/lib/cart";
+import { addServiceRequest, type ServiceRequest } from "@/lib/orders";
 import { toast } from "sonner";
 
+const serviceActions: { type: ServiceRequest["type"]; label: string; icon: typeof Bell; desc: string }[] = [
+  { type: "call-staff", label: "Call Staff", icon: Bell, desc: "We'll be right over" },
+  { type: "water", label: "Request Water", icon: Droplets, desc: "A glass of water" },
+  { type: "cutlery", label: "Request Cutlery", icon: Utensils, desc: "Extra cutlery" },
+  { type: "bill", label: "Request Bill", icon: Receipt, desc: "Get your bill" },
+  { type: "clear", label: "Clear Table", icon: Brush, desc: "Ready for clearing" },
+];
+
 export default function TableOrdering() {
-  const [step, setStep] = useState<"scan" | "menu" | "cart">("scan");
-  const [tableNum, setTableNum] = useState("");
+  const [searchParams] = useSearchParams();
+  const qrTable = searchParams.get("table") || "";
+
+  const [step, setStep] = useState<"scan" | "menu" | "cart">(qrTable ? "menu" : "scan");
+  const [tableNum, setTableNum] = useState(qrTable);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<{ product: Product; qty: number }[]>([]);
 
@@ -20,6 +32,15 @@ export default function TableOrdering() {
 
   const handleStart = () => {
     if (tableNum.trim()) setStep("menu");
+  };
+
+  const handleService = (type: ServiceRequest["type"], label: string) => {
+    if (!tableNum.trim()) {
+      toast.error("Enter your table number first");
+      return;
+    }
+    addServiceRequest(tableNum.trim(), type);
+    toast.success(`${label} — our team has been notified`);
   };
 
   const handleAdd = (product: Product) => {
@@ -48,9 +69,9 @@ export default function TableOrdering() {
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gold/10 text-gold">
                 <QrCode className="h-10 w-10" />
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-3">Table Ordering</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to The Belgravia Roast</h1>
               <p className="text-muted-foreground mb-8">
-                Enter your table number to start browsing the full menu and ordering directly from your seat.
+                Enter your table number and order straight from your seat — no app, no sign-up.
               </p>
               <div className="bg-white rounded-2xl border border-border/50 p-6 mb-6">
                 <label className="text-sm font-medium text-foreground block mb-2">Table Number</label>
@@ -62,6 +83,31 @@ export default function TableOrdering() {
                   className="w-full rounded-xl border border-border px-4 py-3 text-center text-2xl font-bold outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                 />
               </div>
+
+              {/* Quick category jumps */}
+              <div className="mb-8">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">What are you in the mood for?</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.slice(0, 6).map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        if (!tableNum.trim()) {
+                          toast.error("Enter your table number first");
+                          return;
+                        }
+                        setSelectedCat(cat.id);
+                        setStep("menu");
+                      }}
+                      className="flex items-center gap-2 bg-white border border-border/50 rounded-xl px-3 py-2.5 text-sm font-medium hover:border-gold/50 hover:shadow-sm transition-all"
+                    >
+                      <span className="text-lg">{cat.emoji}</span>
+                      <span className="truncate">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 onClick={handleStart}
                 disabled={!tableNum.trim()}
@@ -70,6 +116,32 @@ export default function TableOrdering() {
                 <Coffee className="h-4 w-4" />
                 Start Ordering
               </button>
+
+              {/* Service requests */}
+              <div className="mt-10">
+                <div className="flex items-center gap-2 mb-3 justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-dusty-rose" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Need something?</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {serviceActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={action.type}
+                        onClick={() => handleService(action.type, action.label)}
+                        className="flex flex-col items-center gap-1.5 bg-white border border-border/50 rounded-xl px-2 py-3 hover:border-dusty-rose/50 hover:shadow-sm transition-all"
+                      >
+                        <Icon className="h-5 w-5 text-dusty-rose" />
+                        <span className="text-[11px] font-medium text-foreground/80">{action.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3">
+                  Requests appear instantly on the staff console at the counter.
+                </p>
+              </div>
             </motion.div>
           )}
 
@@ -92,6 +164,23 @@ export default function TableOrdering() {
                 )}
               </div>
 
+              {/* Service bar */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
+                {serviceActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.type}
+                      onClick={() => handleService(action.type, action.label)}
+                      className="shrink-0 inline-flex items-center gap-1.5 bg-white border border-border/60 rounded-xl px-3 py-2 text-xs font-medium text-foreground/80 hover:border-dusty-rose/50 hover:shadow-sm transition-all"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-dusty-rose" />
+                      {action.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Categories */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
                 <button
@@ -105,9 +194,9 @@ export default function TableOrdering() {
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCat(cat.slug)}
+                    onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
                     className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1 ${
-                      selectedCat === cat.slug ? "bg-gold text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                      selectedCat === cat.id ? "bg-gold text-white" : "bg-white border border-border text-foreground/70 hover:bg-muted"
                     }`}
                   >
                     {cat.emoji} {cat.name}
@@ -118,8 +207,15 @@ export default function TableOrdering() {
               {/* Products Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((product) => (
-                  <div key={product.id} className="bg-white rounded-2xl border border-border/50 overflow-hidden">
-                    <img src={product.image} alt={product.name} className="h-36 w-full object-cover" />
+                  <div key={product.id} className={`bg-white rounded-2xl border overflow-hidden ${product.available ? "border-border/50" : "border-border/40 opacity-70"}`}>
+                    <div className="relative">
+                      <img src={product.image} alt={product.name} className="h-36 w-full object-cover" />
+                      {!product.available && (
+                        <div className="absolute inset-0 bg-navy/70 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out Today</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="p-4">
                       <div className="flex items-center gap-1 mb-1">
                         {product.isVeg ? (
@@ -138,7 +234,8 @@ export default function TableOrdering() {
                         <span className="font-bold text-foreground">₹{product.discountPrice ?? product.price}</span>
                         <button
                           onClick={() => handleAdd(product)}
-                          className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all"
+                          disabled={!product.available}
+                          className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           +
                         </button>

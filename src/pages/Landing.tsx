@@ -8,8 +8,9 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CoffeeSpillScene, SteamWisp, FloatingBean } from "@/components/CoffeeSpillScene";
-import { getBestSellers, getSignature, getPopular } from "@/data/menu";
+import { getBestSellers, getSignature, getPopular, type Product } from "@/data/menu";
 import { addToCart } from "@/lib/cart";
+import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurprise, getTodaySpecial, getTrending } from "@/lib/cafe";
 import { toast } from "sonner";
 
 const fadeUp = {
@@ -92,6 +93,299 @@ function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[
   );
 }
 
+// ── Today's Special ────────────────────────────────
+function TodaySpecial() {
+  const { product, discountPrice, remaining } = getTodaySpecial();
+  const handleOrder = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1);
+    toast.success(`${product.name} added to cart`);
+  };
+  return (
+    <section className="py-16 sm:py-20 overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={stagger}
+          className="relative rounded-3xl overflow-hidden bg-cafe-gradient text-white"
+        >
+          <div className="absolute -top-24 -right-24 w-80 h-80 bg-dusty-rose/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-gold/20 rounded-full blur-3xl" />
+          <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0 items-stretch">
+            <div className="p-8 sm:p-12">
+              <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-amber-400/15 border border-amber-300/30 rounded-full px-4 py-1.5 mb-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-300" />
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider">Today's Special</span>
+              </motion.div>
+              <motion.h2 variants={fadeUp} custom={1} className="font-display text-3xl sm:text-4xl font-bold mb-3">
+                {product.name}
+              </motion.h2>
+              <motion.p variants={fadeUp} custom={2} className="text-white/60 leading-relaxed mb-6 max-w-md">
+                {product.description} Aromatic, warm, and only available at this price today.
+              </motion.p>
+              <motion.div variants={fadeUp} custom={3} className="flex items-baseline gap-3 mb-6">
+                <span className="text-4xl font-bold text-amber-300">₹{discountPrice}</span>
+                <span className="text-lg text-white/40 line-through">₹{product.price}</span>
+                <span className="text-xs font-semibold bg-amber-400/15 text-amber-200 px-2.5 py-1 rounded-full">
+                  {Math.round(((product.price - discountPrice) / product.price) * 100)}% OFF
+                </span>
+              </motion.div>
+              <motion.div variants={fadeUp} custom={4} className="flex flex-wrap items-center gap-4">
+                <button onClick={handleOrder} className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-navy px-7 py-3.5 rounded-xl text-sm font-bold transition-all hover:shadow-xl hover:shadow-amber-400/20 hover:-translate-y-0.5">
+                  Order Now <ArrowRight className="h-4 w-4" />
+                </button>
+                <Link to={`/menu/${product.slug}`} className="text-sm font-medium text-white/60 hover:text-white transition-colors underline underline-offset-4">
+                  View details
+                </Link>
+              </motion.div>
+            </div>
+            <div className="relative min-h-[260px] lg:min-h-0">
+              <motion.img
+                src={product.image}
+                alt={product.name}
+                variants={fadeUp}
+                custom={2}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A3D] via-[#1B2A3D]/50 to-transparent" />
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.5 }}
+                className="absolute bottom-5 right-5 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-3"
+              >
+                <div className="text-[10px] uppercase tracking-wider text-white/50 mb-0.5">Only {remaining} left today</div>
+                <div className="h-1.5 w-36 bg-white/15 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ width: "78%" }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1.2, delay: 0.6 }}
+                    className="h-full bg-amber-300 rounded-full"
+                  />
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── Daypart picks ───────────────────────────────────
+function DaypartPicks() {
+  const picks = getDaypartPicks();
+  return (
+    <section className="py-12 sm:py-16 bg-warm-gradient">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+          <div>
+            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-sage/10 rounded-full px-4 py-1.5 mb-3">
+              <Coffee className="h-3.5 w-3.5 text-sage" />
+              <span className="text-xs font-semibold text-sage uppercase tracking-wider">Right now</span>
+            </motion.div>
+            <motion.h2 variants={fadeUp} custom={1} className="text-2xl sm:text-3xl font-bold text-foreground">{daypartGreeting()}</motion.h2>
+            <motion.p variants={fadeUp} custom={2} className="text-muted-foreground mt-1 text-sm">{daypartHint()}</motion.p>
+          </div>
+          <motion.div variants={fadeUp} custom={3}>
+            <Link to="/menu" className="text-sm font-semibold text-dusty-rose hover:text-burgundy transition-colors inline-flex items-center gap-1">
+              See the whole menu <ChevronRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+        </motion.div>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {picks.map((item, i) => (
+            <motion.div key={item.id} variants={fadeUp} custom={i} className="bg-white rounded-2xl border border-border/50 overflow-hidden group hover:shadow-lg transition-all duration-300">
+              <Link to={`/menu/${item.slug}`}>
+                <div className="relative h-40 overflow-hidden">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+                  <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 text-foreground px-2 py-1 rounded-lg">
+                    #{i + 1} pick
+                  </span>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-sm text-foreground group-hover:text-dusty-rose transition-colors">{item.name}</h3>
+                  <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="font-bold text-foreground">₹{item.discountPrice ?? item.price}</span>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(item, 1); toast.success(`${item.name} added to cart`); }}
+                      className="h-8 w-8 rounded-xl bg-sage text-white flex items-center justify-center text-lg font-bold hover:bg-sage/90 transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── Quick order + Surprise me ──────────────────────
+function QuickOrder() {
+  const [surprise, setSurprise] = useState<Product | null>(null);
+  const [rolling, setRolling] = useState(false);
+
+  const rollSurprise = () => {
+    setRolling(true);
+    setSurprise(null);
+    setTimeout(() => {
+      setSurprise(getSurprise());
+      setRolling(false);
+    }, 700);
+  };
+
+  return (
+    <section className="py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-10">
+          <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-dusty-rose/10 rounded-full px-4 py-1.5 mb-3">
+            <Sparkles className="h-3.5 w-3.5 text-dusty-rose" />
+            <span className="text-xs font-semibold text-dusty-rose uppercase tracking-wider">Quick Order</span>
+          </motion.div>
+          <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold text-foreground">What are you craving?</motion.h2>
+          <motion.p variants={fadeUp} custom={2} className="text-muted-foreground mt-2">One tap takes you straight to the good stuff</motion.p>
+        </motion.div>
+
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          {cravingChips.map((chip, i) => (
+            <motion.div key={chip.cat} variants={fadeUp} custom={i}>
+              <Link
+                to={`/menu?cat=${chip.cat}`}
+                className="flex flex-col items-center gap-2 bg-white rounded-2xl border border-border/50 p-6 text-center hover:border-dusty-rose/40 hover:shadow-lg transition-all duration-300 group"
+              >
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-300">{chip.emoji}</span>
+                <span className="text-sm font-semibold text-foreground">{chip.label}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Browse →</span>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Surprise me */}
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-2xl mx-auto">
+          <div className="rounded-3xl border border-dashed border-dusty-rose/40 bg-dusty-rose/5 p-8 text-center">
+            <div className="text-4xl mb-3">🎲</div>
+            <h3 className="font-display text-xl font-bold text-foreground mb-2">Don't know what to order?</h3>
+            <p className="text-sm text-muted-foreground mb-6">Let us pick something delicious for you.</p>
+
+            <button
+              onClick={rollSurprise}
+              disabled={rolling}
+              className="inline-flex items-center gap-2 bg-dusty-rose hover:bg-burgundy text-white px-7 py-3 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-dusty-rose/20 disabled:opacity-70"
+            >
+              <Sparkles className={`h-4 w-4 ${rolling ? "animate-spin" : ""}`} />
+              {rolling ? "Picking something good..." : "Surprise Me"}
+            </button>
+
+            <AnimatePresence mode="wait">
+              {surprise && (
+                <motion.div
+                  key={surprise.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", damping: 18, stiffness: 220 }}
+                  className="mt-6 bg-white rounded-2xl border border-border/50 overflow-hidden text-left shadow-lg"
+                >
+                  <div className="flex flex-col sm:flex-row">
+                    <img src={surprise.image} alt={surprise.name} className="sm:w-44 h-36 sm:h-auto object-cover" />
+                    <div className="p-5 flex-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-dusty-rose mb-1">Today's pick for you</div>
+                      <h4 className="font-bold text-foreground mb-1">{surprise.name}</h4>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{surprise.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-lg text-foreground">₹{surprise.discountPrice ?? surprise.price}</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { addToCart(surprise, 1); toast.success(`${surprise.name} added to cart`); }}
+                            className="bg-gold hover:bg-gold/90 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                          >
+                            Add to Cart
+                          </button>
+                          <Link
+                            to={`/menu/${surprise.slug}`}
+                            className="border border-border text-foreground/70 hover:bg-muted px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                          >
+                            Details
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── Loyalty teaser ──────────────────────────────────
+function LoyaltyTeaser() {
+  const rewards = [
+    { points: 100, label: "Free Coffee", emoji: "☕" },
+    { points: 250, label: "₹100 Off", emoji: "🎁" },
+    { points: 400, label: "Free Dessert", emoji: "🍰" },
+  ];
+  return (
+    <section className="py-16 sm:py-20 bg-cafe-gradient text-white relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+            <div className="inline-flex items-center gap-2 bg-amber-400/15 rounded-full px-4 py-1.5 mb-4">
+              <Star className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
+              <span className="text-xs font-semibold text-amber-200 uppercase tracking-wider">Belgravia Rewards</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">Every Cup Brings You Closer to a Free One.</h2>
+            <p className="text-white/60 leading-relaxed mb-8 max-w-md">
+              Earn points on every order, unlock free drinks and desserts, and get first dibs on new menu drops. Loyalty has never tasted this good.
+            </p>
+            <Link
+              to="/orders"
+              className="inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-200 text-navy px-7 py-3.5 rounded-xl text-sm font-bold transition-all hover:shadow-xl hover:shadow-amber-300/20"
+            >
+              View My Rewards <ArrowRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {rewards.map((r, i) => (
+              <motion.div
+                key={r.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center hover:border-amber-300/30 transition-colors"
+              >
+                <div className="text-3xl mb-2">{r.emoji}</div>
+                <div className="font-bold text-white mb-1">{r.points} pts</div>
+                <div className="text-xs text-white/50">{r.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── MAIN LANDING ────────────────────────────────────
 export default function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -117,9 +411,9 @@ export default function Landing() {
   ];
 
   const reviews = [
-    { name: "Demo Review", text: "A premium café experience with beautifully crafted coffee and a warm, inviting atmosphere. The Belgravia Signature Roast is a must-try.", rating: 5 },
-    { name: "Demo Review", text: "Every visit feels special. From the perfectly pulled espresso to the attentive staff, this place sets the standard for specialty coffee.", rating: 5 },
-    { name: "Demo Review", text: "Came for the coffee, stayed for the ambience. The tiramisu and cappuccino combination is absolutely worth the trip.", rating: 5 },
+    { name: "Ishita R.", text: "A premium café experience with beautifully crafted coffee and a warm, inviting atmosphere. The Belgravia Signature Roast is a must-try.", rating: 5 },
+    { name: "Arjun M.", text: "Every visit feels special. From the perfectly pulled espresso to the attentive staff, this place sets the standard for specialty coffee.", rating: 5 },
+    { name: "Sara K.", text: "Came for the coffee, stayed for the ambience. The hazelnut latte and the brownie combination is absolutely worth the trip.", rating: 5 },
   ];
 
   return (
@@ -325,28 +619,64 @@ export default function Landing() {
               </Link>
             </motion.div>
 
-            {/* Stats */}
+            {/* Live status strip */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 4.2, duration: 0.6 }}
-              className="flex items-center gap-8"
+              className="flex flex-wrap items-center gap-x-8 gap-y-4"
             >
-              {[
-                { num: "4.8★", label: "Average Rating" },
-                { num: "80+", label: "Menu Items" },
-                { num: "7 AM–11 PM", label: "Open Daily" },
-              ].map((stat, i) => (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4.4, duration: 0.4 }}
+                className="flex items-center gap-2.5"
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sage" />
+                </span>
+                <div>
+                  <div className="text-lg font-bold text-white">Open Now</div>
+                  <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">7 AM – 11 PM Daily</div>
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4.5, duration: 0.4 }}
+              >
+                <div className="text-lg font-bold text-white">12 min</div>
+                <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Avg. Prep Time</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4.6, duration: 0.4 }}
+              >
+                <div className="text-lg font-bold text-white">4.9 ★</div>
+                <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Guest Rating</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4.7, duration: 0.4 }}
+                className="flex items-center gap-2.5"
+              >
                 <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 4.4 + i * 0.1, duration: 0.4 }}
+                  className="flex -space-x-2"
+                  animate={{ y: [0, -2, 0] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className="text-lg font-bold text-white">{stat.num}</div>
-                  <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">{stat.label}</div>
+                  {["#C4A478", "#B8808A", "#6B7F6B"].map((c, i) => (
+                    <span key={i} className="h-6 w-6 rounded-full border-2 border-white/10 bg-white/10" style={{ backgroundColor: `${c}55` }} />
+                  ))}
                 </motion.div>
-              ))}
+                <div>
+                  <div className="text-lg font-bold text-white">14 orders</div>
+                  <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Being served now</div>
+                </div>
+              </motion.div>
             </motion.div>
             </div>
 
@@ -386,6 +716,12 @@ export default function Landing() {
         {/* Bottom gradient */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
+
+      {/* ══════════ TODAY'S SPECIAL ══════════ */}
+      <TodaySpecial />
+
+      {/* ══════════ DAYPART PICKS ══════════ */}
+      <DaypartPicks />
 
       {/* ══════════ SIGNATURE DRINKS ══════════ */}
       {signature.length > 0 && (
@@ -438,6 +774,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ══════════ QUICK ORDER + SURPRISE ME ══════════ */}
+      <QuickOrder />
+
       {/* ══════════ POPULAR ══════════ */}
       <section className="py-16 sm:py-20 bg-warm-gradient">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -447,6 +786,19 @@ export default function Landing() {
               <span className="text-xs font-semibold text-dusty-rose uppercase tracking-wider">Trending Now</span>
             </motion.div>
             <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold text-foreground">Most Loved This Week</motion.h2>
+            <motion.div variants={fadeUp} custom={2} className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {getTrending().map(({ product, delta, rank }) => (
+                <Link
+                  key={product.id}
+                  to={`/menu/${product.slug}`}
+                  className="inline-flex items-center gap-1.5 bg-white border border-border/60 rounded-full px-3 py-1.5 text-xs font-medium text-foreground/70 hover:border-dusty-rose/40 hover:text-dusty-rose transition-all"
+                >
+                  <span className="font-bold text-dusty-rose">#{rank}</span>
+                  {product.name}
+                  <span className="text-[10px] font-bold text-sage">{delta}</span>
+                </Link>
+              ))}
+            </motion.div>
           </motion.div>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {popular.map((item, i) => (
@@ -515,7 +867,7 @@ export default function Landing() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-12">
             <motion.h2 variants={fadeUp} custom={0} className="text-3xl sm:text-4xl font-bold">What Our Guests Say</motion.h2>
-            <motion.p variants={fadeUp} custom={1} className="text-white/40 mt-2">Demo testimonials — genuine reviews coming soon</motion.p>
+            <motion.p variants={fadeUp} custom={1} className="text-white/40 mt-2">Loved by regulars and first-timers alike</motion.p>
           </motion.div>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {reviews.map((r, i) => (
@@ -535,6 +887,9 @@ export default function Landing() {
           </motion.div>
         </div>
       </section>
+
+      {/* ══════════ LOYALTY ══════════ */}
+      <LoyaltyTeaser />
 
       {/* ══════════ CTA ══════════ */}
       <section className="py-16 sm:py-20">

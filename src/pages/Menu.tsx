@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Clock, Star, Leaf } from "lucide-react";
+import { Search, Clock, Star, Leaf, Heart, Flame, Sparkles, ChevronRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, products, type Product } from "@/data/menu";
 import { addToCart } from "@/lib/cart";
+import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurprise } from "@/lib/cafe";
+import { isFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
 
 const fadeUp = {
@@ -17,10 +19,32 @@ const fadeUp = {
   }),
 };
 
+function FavoriteButton({ product }: { product: Product }) {
+  const favs = useFavorites();
+  const active = favs.includes(product.id);
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFavorite(product.id);
+        toast.success(active ? "Removed from favourites" : "Added to favourites");
+      }}
+      aria-label={active ? "Remove from favourites" : "Add to favourites"}
+      className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${
+        active ? "bg-dusty-rose text-white" : "bg-white/95 text-muted-foreground hover:text-dusty-rose"
+      }`}
+    >
+      <Heart className={`h-4 w-4 ${active ? "fill-current" : ""}`} />
+    </button>
+  );
+}
+
 function MenuCard({ product, index }: { product: Product; index: number }) {
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!product.available) return;
     addToCart(product, 1);
     toast.success(`${product.name} added to cart`);
   };
@@ -32,10 +56,15 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-30px" }}
+      className="relative"
     >
       <Link
         to={`/menu/${product.slug}`}
-        className="group flex gap-4 bg-white rounded-2xl p-4 border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300"
+        className={`group flex gap-4 bg-white rounded-2xl p-4 border transition-all duration-300 ${
+          product.available
+            ? "border-border/50 shadow-sm hover:shadow-lg"
+            : "border-border/40 opacity-70"
+        }`}
       >
         <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-xl overflow-hidden shrink-0">
           <img
@@ -46,6 +75,14 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
           {product.discountPrice && (
             <div className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
               {Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF
+            </div>
+          )}
+          {!product.available && (
+            <div className="absolute inset-0 bg-navy/70 flex items-center justify-center">
+              <div className="text-center px-2">
+                <div className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out</div>
+                <div className="text-[9px] text-white/60 mt-0.5">Back tomorrow</div>
+              </div>
             </div>
           )}
         </div>
@@ -66,15 +103,27 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                   {product.name}
                 </h3>
               </div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="flex items-center gap-0.5 text-[10px] font-medium text-foreground/70">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  {product.rating}
+                </span>
+                {product.rating >= 4.8 && (
+                  <span className="flex items-center gap-0.5 text-[9px] font-bold text-dusty-rose uppercase tracking-wide">
+                    <Flame className="h-2.5 w-2.5" /> Trending
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                 {product.description}
               </p>
-            </div>              {(product.badge === "bestseller" || product.bestSeller) && (
-                  <span className="shrink-0 flex items-center gap-1 bg-dusty-rose/10 text-dusty-rose text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    <Star className="h-2.5 w-2.5 fill-current" />
-                    Best Seller
-                  </span>
-                )}
+            </div>
+            {(product.badge === "bestseller" || product.bestSeller) && (
+              <span className="shrink-0 flex items-center gap-1 bg-dusty-rose/10 text-dusty-rose text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <Star className="h-2.5 w-2.5 fill-current" />
+                Best Seller
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2">
@@ -83,14 +132,15 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                 <span className="text-xs text-muted-foreground line-through">₹{product.price}</span>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Clock className="h-3 w-3" /> {product.prepTime} min
               </span>
-              {product.calories && <span className="text-[10px] text-muted-foreground">{product.calories} cal</span>}
+              <FavoriteButton product={product} />
               <button
                 onClick={handleAdd}
-                className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all hover:shadow-md shrink-0"
+                disabled={!product.available}
+                className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all hover:shadow-md shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 +
               </button>
@@ -107,6 +157,10 @@ export default function MenuPage() {
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get("cat"));
   const [showVegOnly, setShowVegOnly] = useState(false);
+  const [surprise, setSurprise] = useState<Product | null>(null);
+  const [rolling, setRolling] = useState(false);
+
+  const daypartPicks = useMemo(() => getDaypartPicks(), []);
 
   const filtered = useMemo(() => {
     let result = products;
@@ -136,6 +190,15 @@ export default function MenuPage() {
     }
   };
 
+  const rollSurprise = () => {
+    setRolling(true);
+    setSurprise(null);
+    setTimeout(() => {
+      setSurprise(getSurprise());
+      setRolling(false);
+    }, 650);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -162,6 +225,112 @@ export default function MenuPage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        {/* Daypart banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-cafe-gradient text-white rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-dusty-rose/20 rounded-full blur-3xl" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="font-semibold text-sm sm:text-base mb-0.5">{daypartGreeting()}</div>
+              <div className="text-xs text-white/50">{daypartHint()}</div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {daypartPicks.map((p) => (
+                <Link
+                  key={p.id}
+                  to={`/menu/${p.slug}`}
+                  className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                >
+                  {p.name} <ChevronRight className="h-3 w-3 opacity-50" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Craving chips */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
+            What are you craving?
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {cravingChips.map((chip) => (
+              <button
+                key={chip.cat}
+                onClick={() => handleCategoryClick(selectedCategory === chip.cat ? null : chip.cat)}
+                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  selectedCategory === chip.cat
+                    ? "bg-gold text-white shadow-md shadow-gold/20"
+                    : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                }`}
+              >
+                <span className="text-base">{chip.emoji}</span>
+                {chip.label}
+              </button>
+            ))}
+            <button
+              onClick={rollSurprise}
+              disabled={rolling}
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-dusty-rose/10 text-dusty-rose border border-dusty-rose/30 hover:bg-dusty-rose/20 transition-all"
+            >
+              <Sparkles className={`h-4 w-4 ${rolling ? "animate-spin" : ""}`} />
+              {rolling ? "Picking..." : "Surprise Me"}
+            </button>
+          </div>
+
+          {/* Surprise reveal */}
+          <AnimatePresence>
+            {surprise && (
+              <motion.div
+                key={surprise.id}
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0, y: -8, height: 0 }}
+                className="overflow-hidden mt-3"
+              >
+                <div className="bg-white rounded-2xl border border-dusty-rose/30 shadow-md overflow-hidden">
+                  <div className="flex flex-col sm:flex-row">
+                    <img src={surprise.image} alt={surprise.name} className="sm:w-32 h-28 sm:h-auto object-cover" />
+                    <div className="p-4 flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex-1">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-dusty-rose mb-0.5">
+                          Today's pick for you
+                        </div>
+                        <h4 className="font-bold text-foreground">{surprise.name}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{surprise.description}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-bold text-lg text-foreground">₹{surprise.discountPrice ?? surprise.price}</span>
+                        <button
+                          onClick={() => { addToCart(surprise, 1); toast.success(`${surprise.name} added to cart`); }}
+                          className="bg-gold hover:bg-gold/90 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                        >
+                          Add to Cart
+                        </button>
+                        <Link
+                          to={`/menu/${surprise.slug}`}
+                          className="border border-border text-foreground/70 hover:bg-muted px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+                        >
+                          Details
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">

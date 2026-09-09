@@ -1,10 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Truck, Store, ChevronRight } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, Store, ChevronRight, Check, Tag, Sparkles, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/cart";
+import { toast } from "sonner";
+
+const COUPONS: Record<string, { label: string; pct: number; cap: number }> = {
+  BELGRAVIA10: { label: "10% off your first order", pct: 0.1, cap: 200 },
+  STUDENT15: { label: "15% student discount", pct: 0.15, cap: 150 },
+  HAPPY3PM: { label: "Happy hours — 20% off", pct: 0.2, cap: 100 },
+};
+
+const steps = ["Cart", "Details", "Pay", "Track"];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -12,13 +21,41 @@ export default function CheckoutPage() {
   const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | "delivery">("dine-in");
   const [tableNumber, setTableNumber] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", address: "", notes: "" });
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; label: string; pct: number; cap: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
 
   const tax = Math.round(total * 0.05);
-  const grandTotal = total + tax;
+  const discount = coupon ? Math.min(Math.round(total * coupon.pct), coupon.cap) : 0;
+  const grandTotal = total + tax - discount;
+
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    const found = COUPONS[code];
+    if (found) {
+      setCoupon({ code, ...found });
+      setCouponError("");
+      toast.success(`Coupon ${code} applied`);
+    } else {
+      setCouponError("That code isn't valid — try BELGRAVIA10");
+    }
+  };
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/payment", { state: { grandTotal, orderType, tableNumber, ...formData } });
+    navigate("/payment", {
+      state: {
+        grandTotal,
+        subtotal: total,
+        tax,
+        discount,
+        couponCode: coupon?.code,
+        orderType,
+        tableNumber,
+        ...formData,
+      },
+    });
   };
 
   if (items.length === 0) {
@@ -45,9 +82,31 @@ export default function CheckoutPage() {
             <ArrowLeft className="h-4 w-4" /> Back to Cart
           </Link>
 
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-bold text-foreground mb-8">
-            Checkout
-          </motion.h1>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-6">Checkout</h1>
+            {/* Progress steps */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {steps.map((step, i) => {
+                const done = i < 2;
+                const active = i === 2;
+                return (
+                  <div key={step} className="flex items-center gap-2 sm:gap-3 flex-1 last:flex-none">
+                    <div className="flex items-center gap-2">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                        done ? "bg-sage text-white" : active ? "bg-gold text-white shadow-md shadow-gold/20" : "bg-muted text-muted-foreground"
+                      }`}>
+                        {done ? <Check className="h-4 w-4" /> : i + 1}
+                      </div>
+                      <span className={`text-xs font-semibold hidden sm:block ${active || done ? "text-foreground" : "text-muted-foreground"}`}>
+                        {step}
+                      </span>
+                    </div>
+                    {i < steps.length - 1 && <div className={`h-0.5 flex-1 rounded-full ${done ? "bg-sage" : "bg-muted"}`} />}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
 
           <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
@@ -155,9 +214,57 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Coupon */}
+                <div className="mb-4">
+                  {coupon ? (
+                    <div className="flex items-center justify-between bg-sage/10 border border-sage/30 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-sage" />
+                        <div>
+                          <div className="text-xs font-bold text-sage">{coupon.code}</div>
+                          <div className="text-[10px] text-muted-foreground">{coupon.label}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setCoupon(null); setCouponInput(""); }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value)}
+                          placeholder="Coupon code"
+                          className="flex-1 rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          className="px-3 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition-all"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      {couponError && <p className="text-[10px] text-red-500 mt-1.5">{couponError}</p>}
+                    </div>
+                  )}
+                </div>
+
                 <div className="border-t pt-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>₹{total}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Tax (5%)</span><span>₹{tax}</span></div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sage">
+                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Discount</span>
+                      <span>-₹{discount}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 flex justify-between"><span className="font-semibold">Total</span><span className="font-bold text-lg">₹{grandTotal}</span></div>
                 </div>
                 <button

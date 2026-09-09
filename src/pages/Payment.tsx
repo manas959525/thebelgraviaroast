@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { UpiQrCode } from "@/components/UpiQrCode";
-import { clearCart } from "@/lib/cart";
+import { clearCart, getCartItems } from "@/lib/cart";
 
 type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed" | "failed";
 
@@ -35,6 +35,10 @@ export default function PaymentPage() {
   const location = useLocation();
   const state = location.state as {
     grandTotal?: number;
+    subtotal?: number;
+    tax?: number;
+    discount?: number;
+    couponCode?: string;
     orderType?: string;
     tableNumber?: string;
     name?: string;
@@ -57,15 +61,27 @@ export default function PaymentPage() {
     setPaymentStatus("verification_pending");
     setTimeout(() => {
       setPaymentStatus("completed");
+      const cartItems = getCartItems();
       clearCart();
       navigate("/order-confirmation", {
         state: {
           orderId,
           total,
+          subtotal: state?.subtotal ?? total,
+          tax: state?.tax ?? Math.round(total * 0.05),
+          discount: state?.discount ?? 0,
+          couponCode: state?.couponCode,
           orderType: state?.orderType || "dine-in",
           tableNumber: state?.tableNumber,
+          guestName: state?.name,
           paymentMethod: "upi",
           paymentStatus: "paid",
+          items: cartItems.map((i) => ({
+            productId: i.product.id,
+            name: i.product.name,
+            qty: i.quantity,
+            price: i.product.discountPrice ?? i.product.price,
+          })),
         },
       });
     }, 1500);
@@ -74,15 +90,27 @@ export default function PaymentPage() {
   const handleCashOrder = () => {
     setPaymentStatus("initiated");
     setTimeout(() => {
+      const cartItems = getCartItems();
       clearCart();
       navigate("/order-confirmation", {
         state: {
           orderId,
           total,
+          subtotal: state?.subtotal ?? total,
+          tax: state?.tax ?? Math.round(total * 0.05),
+          discount: state?.discount ?? 0,
+          couponCode: state?.couponCode,
           orderType: state?.orderType || "dine-in",
           tableNumber: state?.tableNumber,
+          guestName: state?.name,
           paymentMethod: "cash",
           paymentStatus: "pending",
+          items: cartItems.map((i) => ({
+            productId: i.product.id,
+            name: i.product.name,
+            qty: i.quantity,
+            price: i.product.discountPrice ?? i.product.price,
+          })),
         },
       });
     }, 1000);

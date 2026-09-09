@@ -1,19 +1,79 @@
-import { Link, useLocation } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone } from "lucide-react";
+import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { products } from "@/data/menu";
+import { addToCart } from "@/lib/cart";
+import { saveOrder, type OrderLineItem, type OrderStatus } from "@/lib/orders";
+import { toast } from "sonner";
 
 // Fallback only for direct visits without order state; computed at module load,
 // never during render.
 const FALLBACK_ORDER_ID = `TBR-${Date.now().toString(36).toUpperCase()}`;
 
+interface ConfirmationState {
+  orderId?: string;
+  total?: number;
+  subtotal?: number;
+  tax?: number;
+  discount?: number;
+  couponCode?: string;
+  orderType?: string;
+  tableNumber?: string;
+  guestName?: string;
+  paymentMethod?: string;
+  items?: OrderLineItem[];
+}
+
 export default function OrderConfirmation() {
   const location = useLocation();
-  const state = location.state as { orderId?: string; total?: number; orderType?: string; tableNumber?: string } | null;
+  const navigate = useNavigate();
+  const state = location.state as ConfirmationState | null;
 
   const orderId = state?.orderId || FALLBACK_ORDER_ID;
   const total = state?.total || 0;
+  const items = state?.items || [];
+  const [saved, setSaved] = useState(false);
+
+  // Persist to local order history exactly once (StrictMode-safe).
+  useEffect(() => {
+    if (saved || !state?.orderId) return;
+    saveOrder({
+      id: state.orderId,
+      items: state.items || [],
+      subtotal: state.subtotal ?? total,
+      tax: state.tax ?? Math.round(total * 0.05),
+      discount: state.discount ?? 0,
+      total,
+      orderType: (state.orderType as "dine-in" | "takeaway" | "delivery") || "dine-in",
+      tableNumber: state.tableNumber,
+      guestName: state.guestName,
+      paymentMethod: state.paymentMethod,
+      status: "pending" as OrderStatus,
+      placedAt: Date.now(),
+      etaMinutes: 12,
+    });
+    setSaved(true);
+  }, [saved, state, total]);
+
+  const handleOrderAgain = () => {
+    let added = 0;
+    items.forEach((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (product && product.available) {
+        addToCart(product, item.qty);
+        added += item.qty;
+      }
+    });
+    if (added > 0) {
+      toast.success(`${added} item${added === 1 ? "" : "s"} added back to your cart`);
+      navigate("/cart");
+    } else {
+      toast.error("Those items aren't available right now");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,10 +106,34 @@ export default function OrderConfirmation() {
               <span className="text-sm text-muted-foreground">Order ID</span>
               <span className="font-mono font-bold text-foreground">{orderId}</span>
             </div>
+
+            {items.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {items.map((item, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-foreground/80">{item.name} × {item.qty}</span>
+                    <span className="font-medium">₹{item.price * item.qty}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="space-y-3 text-sm">
+              {state?.discount ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">₹{state.subtotal ?? total}</span>
+                  </div>
+                  <div className="flex justify-between text-sage">
+                    <span>Coupon {state.couponCode ? `(${state.couponCode})` : "discount"}</span>
+                    <span className="font-medium">-₹{state.discount}</span>
+                  </div>
+                </>
+              ) : null}
               <div className="flex justify-between">
                 <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> Estimated Time</span>
-                <span className="font-medium">15–20 minutes</span>
+                <span className="font-medium">10–15 minutes</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> Order Type</span>
@@ -67,6 +151,22 @@ export default function OrderConfirmation() {
               </div>
             </div>
           </motion.div>
+
+          {items.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="mb-8"
+            >
+              <button
+                onClick={handleOrderAgain}
+                className="w-full flex items-center justify-center gap-2 border border-border text-foreground px-5 py-3 rounded-xl text-sm font-semibold hover:bg-muted transition-all"
+              >
+                <RotateCcw className="h-4 w-4" /> Order the Same Again
+              </button>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}

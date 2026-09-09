@@ -1,12 +1,71 @@
 import { useParams, Link } from "react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf } from "lucide-react";
+import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getProductBySlug, getProductsByCategory } from "@/data/menu";
 import { addToCart } from "@/lib/cart";
+import { getComplements } from "@/lib/cafe";
+import { toggleFavorite, useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
+
+function FavoriteButton({ product }: { product: { id: string; name: string } }) {
+  const favs = useFavorites();
+  const active = favs.includes(product.id);
+  return (
+    <button
+      onClick={() => {
+        toggleFavorite(product.id);
+        toast.success(active ? "Removed from favourites" : "Added to favourites");
+      }}
+      aria-label={active ? "Remove from favourites" : "Add to favourites"}
+      className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all shrink-0 ${
+        active ? "bg-dusty-rose border-dusty-rose text-white" : "border-border bg-white text-muted-foreground hover:text-dusty-rose"
+      }`}
+    >
+      <Heart className={`h-5 w-5 ${active ? "fill-current" : ""}`} />
+    </button>
+  );
+}
+
+function PerfectWith({ product }: { product: ReturnType<typeof getProductBySlug> }) {
+  const complements = product ? getComplements(product) : [];
+  if (complements.length === 0) return null;
+  return (
+    <div className="mt-16">
+      <div className="flex items-center gap-2 mb-6">
+        <Sparkles className="h-4 w-4 text-dusty-rose" />
+        <h2 className="text-xl font-bold text-foreground">Perfect with your {product?.name}</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {complements.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white rounded-2xl border border-border/50 p-3 flex items-center gap-4 hover:shadow-md transition-all"
+          >
+            <Link to={`/menu/${item.slug}`} className="shrink-0">
+              <img src={item.image} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link to={`/menu/${item.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
+                {item.name}
+              </Link>
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>
+              <div className="font-bold text-foreground mt-1">₹{item.discountPrice ?? item.price}</div>
+            </div>
+            <button
+              onClick={() => { addToCart(item, 1); toast.success(`${item.name} added to cart`); }}
+              className="h-9 w-9 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all shrink-0"
+            >
+              +
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -115,7 +174,10 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">{product.name}</h1>
+              <div className="flex items-start gap-3 mb-3">
+                <h1 className="text-3xl sm:text-4xl font-bold text-foreground flex-1">{product.name}</h1>
+                <FavoriteButton product={product} />
+              </div>
               <p className="text-muted-foreground leading-relaxed mb-6">{product.description}</p>
 
               {/* Quick Info */}
@@ -267,16 +329,25 @@ export default function ProductDetail() {
               </div>
 
               {/* Add to Cart */}
-              <button
-                onClick={handleAdd}
-                className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-gold/20"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                Add to Cart — ₹{totalPrice}
-              </button>
+              {!product.available ? (
+                <div className="w-full flex items-center justify-center gap-2 bg-muted text-muted-foreground py-3.5 rounded-xl text-sm font-semibold">
+                  Sold out for today — back tomorrow
+                </div>
+              ) : (
+                <button
+                  onClick={handleAdd}
+                  className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg hover:shadow-gold/20"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Add to Cart — ₹{totalPrice}
+                </button>
+              )}
             </motion.div>
           </div>
         </div>
+
+        {/* Perfect with */}
+        <PerfectWith product={product} />
 
         {/* Related Items */}
         {related.length > 0 && (
