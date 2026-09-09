@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw, Printer, Receipt, ShieldCheck, Hourglass } from "lucide-react";
+import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw, Printer, Receipt, ShieldCheck, Hourglass, Star, MessageSquareHeart } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { products } from "@/data/menu";
@@ -35,6 +37,10 @@ export default function OrderConfirmation() {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as ConfirmationState | null;
+  const submitReview = useMutation(api.cafe.submitReview);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSent, setReviewSent] = useState(false);
 
   const orderId = state?.orderId || FALLBACK_ORDER_ID;
   const total = state?.total || 0;
@@ -207,6 +213,64 @@ export default function OrderConfirmation() {
               >
                 <RotateCcw className="h-4 w-4" /> Order the Same Again
               </button>
+            </motion.div>
+          )}
+
+          {/* Rate your experience — feeds the landing-page reviews after moderation */}
+          {state?.orderId && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.75 }}
+              className="bg-white rounded-2xl border border-border/50 p-6 mb-8 text-left"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquareHeart className="h-4 w-4 text-dusty-rose" />
+                <h4 className="font-semibold text-sm">How was your experience?</h4>
+              </div>
+              {reviewSent ? (
+                <p className="text-sm text-sage">Thank you! Your review was sent to the team.</p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1 mb-3">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => setReviewRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className="p-0.5">
+                        <Star
+                          className={`h-6 w-6 transition-colors ${
+                            n <= reviewRating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Tell us about your coffee..."
+                    rows={2}
+                    className="w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 resize-none"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!reviewText.trim()) {
+                        toast.error("Please add a few words about your visit");
+                        return;
+                      }
+                      void submitReview({
+                        name: state?.guestName || "Guest",
+                        rating: reviewRating,
+                        text: reviewText.trim(),
+                        orderNumber: state.orderId,
+                      });
+                      setReviewSent(true);
+                      toast.success("Review submitted for moderation");
+                    }}
+                    className="mt-3 w-full bg-gold hover:bg-gold/90 text-white py-2.5 rounded-xl text-sm font-semibold transition-all"
+                  >
+                    Send Review
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
 

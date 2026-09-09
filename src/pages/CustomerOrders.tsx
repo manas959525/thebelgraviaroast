@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, ChevronRight, Clock, CheckCircle, ChefHat, Heart, RotateCcw, Gift, Star, Coffee } from "lucide-react";
+import { ShoppingBag, ChevronRight, Clock, CheckCircle, ChefHat, Heart, RotateCcw, Gift, Star, Coffee, Sparkles } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { products } from "@/data/menu";
+import { products as staticProducts } from "@/data/menu";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { useOrders, timeAgo } from "@/lib/orders";
 import { useFavorites, toggleFavorite } from "@/lib/favorites";
@@ -29,12 +33,40 @@ const rewardTiers = [
 
 export default function CustomerOrders() {
   const navigate = useNavigate();
-  const orders = useOrders();
+  const localOrders = useOrders();
   const favs = useFavorites();
   const [tab, setTab] = useState<Tab>("orders");
+  const { allProducts } = useProductsWithFlags();
+  const { isAuthenticated, user } = useAuth();
 
-  const favouriteProducts = useMemo(() => products.filter((p) => favs.includes(p.id)), [favs]);
-  const totalSpent = useMemo(() => orders.reduce((sum, o) => sum + o.total, 0), [orders]);
+  // Signed-in guests see the full order history from the café database;
+  // guests fall back to orders placed on this device.
+  const dbOrders = useQuery(api.cafe.listOrders, isAuthenticated ? {} : "skip");
+  const orders = useMemo(() => {
+    if (!isAuthenticated) return localOrders;
+    const mine = dbOrders ?? [];
+    return mine.map((o) => ({
+      id: o.orderNumber ?? o._id,
+      items: o.items.map((it) => ({ productId: it.productId, name: it.name, qty: it.quantity, price: it.price })),
+      subtotal: o.subtotal ?? o.total,
+      tax: o.tax ?? 0,
+      discount: o.discount ?? 0,
+      total: o.total,
+      orderType: o.orderType,
+      tableNumber: o.tableNumber != null ? String(o.tableNumber) : undefined,
+      guestName: o.guestName,
+      paymentMethod: o.paymentMethod,
+      status: o.status,
+      placedAt: o._creationTime,
+      etaMinutes: 12,
+    }));
+  }, [isAuthenticated, dbOrders, localOrders]);
+
+  const favouriteProducts = useMemo(() => allProducts.filter((p) => favs.includes(p.id)), [favs, allProducts]);
+  const totalSpent = useMemo(
+    () => orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0),
+    [orders],
+  );
   const points = Math.floor(totalSpent / 10);
   const nextTier = rewardTiers.find((t) => points < t.points);
   const progress = nextTier ? Math.min(100, Math.round((points / nextTier.points) * 100)) : 100;
@@ -44,8 +76,8 @@ export default function CustomerOrders() {
     if (!order) return;
     let added = 0;
     order.items.forEach((item) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (product && product.available) {
+      const product = staticProducts.find((p) => p.id === item.productId);
+      if (product && allProducts.find((p) => p.id === product.id)?.available) {
         addToCart(product, item.qty);
         added += item.qty;
       }
@@ -98,6 +130,11 @@ export default function CustomerOrders() {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {isAuthenticated && (
+                      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Sparkles className="h-3 w-3 text-gold" /> Showing your full order history, synced live from the café
+                      </div>
+                    )}
                     {orders.map((order, i) => {
                       const config = statusConfig[order.status] ?? statusConfig.pending;
                       const StatusIcon = config.icon;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink, Receipt } from "lucide-react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import { UpiQrCode } from "@/components/UpiQrCode";
@@ -11,8 +11,8 @@ import { toast } from "sonner";
 
 type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed" | "failed";
 
-const UPI_ID = "7728059988@ptyes";
-const CAFÉ_NAME = "THE BELGRAVIA ROAST";
+const DEFAULT_UPI_ID = "7728059988@ptyes";
+const DEFAULT_CAFÉ_NAME = "THE BELGRAVIA ROAST";
 
 function generateOrderId(): string {
   const date = new Date();
@@ -21,10 +21,10 @@ function generateOrderId(): string {
   return `TBR-${dateStr}-${rand}`;
 }
 
-function generateUpiDeepLink(amount: number, orderId: string): string {
+function generateUpiDeepLink(amount: number, orderId: string, upiId: string, cafeName: string): string {
   const params = new URLSearchParams({
-    pa: UPI_ID,
-    pn: CAFÉ_NAME,
+    pa: upiId,
+    pn: cafeName,
     am: amount.toString(),
     cu: "INR",
     tn: `Order ${orderId}`,
@@ -37,6 +37,9 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const placeOrder = useMutation(api.cafe.placeOrder);
+  const settings = useQuery(api.cafe.listSettings);
+  const upiId = settings?.upiId?.trim() || DEFAULT_UPI_ID;
+  const cafeName = settings?.cafeName?.trim() || DEFAULT_CAFÉ_NAME;
 
   const state = location.state as {
     grandTotal?: number;
@@ -60,7 +63,7 @@ export default function PaymentPage() {
 
   const handleInitiatePayment = () => {
     setPaymentStatus("initiated");
-    const deepLink = generateUpiDeepLink(total, orderId);
+    const deepLink = generateUpiDeepLink(total, orderId, upiId, cafeName);
     window.open(deepLink, "_blank");
   };
 
@@ -96,6 +99,7 @@ export default function PaymentPage() {
     } catch {
       toast.warning("Couldn't reach the café database — your receipt is saved on this device.");
     }
+    void cafeName;
 
     clearCart();
     navigate("/order-confirmation", {
@@ -204,14 +208,14 @@ export default function PaymentPage() {
               >
                 {/* Brand header */}
                 <div className="mb-5">
-                  <div className="font-display text-lg font-bold text-foreground tracking-tight">{CAFÉ_NAME}</div>
+                  <div className="font-display text-lg font-bold text-foreground tracking-tight">{cafeName}</div>
                   <div className="text-xs text-muted-foreground mt-1">UPI Payment</div>
                 </div>
 
                 {/* QR Code */}
                 <div className="mx-auto w-56 h-56 sm:w-64 sm:h-64 rounded-2xl bg-white flex items-center justify-center border-2 border-border/60 overflow-hidden mb-5 shadow-sm">
                   {qrImageFailed ? (
-                    <UpiQrCode amount={total} orderId={orderId} />
+                    <UpiQrCode amount={total} orderId={orderId} upiId={upiId} cafeName={cafeName} />
                   ) : (
                     <img
                       src="/manasqrcode.jpeg"
@@ -225,7 +229,7 @@ export default function PaymentPage() {
                 {/* UPI ID */}
                 <div className="mb-4">
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">UPI ID</div>
-                  <div className="font-mono text-sm font-medium text-foreground">{UPI_ID}</div>
+                  <div className="font-mono text-sm font-medium text-foreground">{upiId}</div>
                 </div>
 
                 {/* Amount */}

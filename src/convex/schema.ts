@@ -86,6 +86,7 @@ const schema = defineSchema(
       subtotal: v.optional(v.number()),
       tax: v.optional(v.number()),
       discount: v.optional(v.number()),
+      couponCode: v.optional(v.string()),
       total: v.number(),
       status: v.union(
         v.literal("pending"),
@@ -145,6 +146,7 @@ const schema = defineSchema(
         v.literal("available"),
         v.literal("occupied"),
         v.literal("reserved"),
+        v.literal("bill_requested"),
       ),
       section: v.string(),
       qrCode: v.optional(v.string()),
@@ -153,6 +155,8 @@ const schema = defineSchema(
     offers: defineTable({
       code: v.string(),
       description: v.string(),
+      title: v.optional(v.string()),
+      tag: v.optional(v.string()),
       discountType: v.union(v.literal("percentage"), v.literal("fixed")),
       discountValue: v.number(),
       minOrder: v.number(),
@@ -163,6 +167,29 @@ const schema = defineSchema(
       usageLimit: v.optional(v.number()),
       usedCount: v.number(),
     }).index("by_code", ["code"]),
+
+    // Availability overrides for static-catalog products (sold out / low stock).
+    productFlags: defineTable({
+      productId: v.string(),
+      available: v.boolean(),
+      note: v.optional(v.string()),
+    }).index("by_product", ["productId"]),
+
+    // Simple key/value café settings (name, phone, UPI id, tax rate, hours…).
+    settings: defineTable({
+      key: v.string(),
+      value: v.string(),
+    }).index("by_key", ["key"]),
+
+    // Customer reviews; only approved ones show on the landing page.
+    reviews: defineTable({
+      name: v.string(),
+      rating: v.number(),
+      text: v.string(),
+      orderNumber: v.optional(v.string()),
+      approved: v.boolean(),
+      createdAt: v.number(),
+    }).index("by_approved", ["approved"]),
 
     userContent: defineTable({
       userId: v.id("users"),

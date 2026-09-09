@@ -6,7 +6,8 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { categories, products, type Product } from "@/data/menu";
+import { categories, type Product } from "@/data/menu";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { addServiceRequest, type ServiceRequest } from "@/lib/orders";
 import { toast } from "sonner";
@@ -28,10 +29,11 @@ export default function TableOrdering() {
   const [tableNum, setTableNum] = useState(qrTable);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<{ product: Product; qty: number }[]>([]);
+  const { allProducts } = useProductsWithFlags();
 
   const filtered = selectedCat
-    ? products.filter((p) => p.category === selectedCat)
-    : products;
+    ? allProducts.filter((p) => p.category === selectedCat)
+    : allProducts;
 
   const handleStart = () => {
     if (tableNum.trim()) setStep("menu");

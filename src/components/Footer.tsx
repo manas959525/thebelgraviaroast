@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { Coffee, Instagram, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const footerLinks = {
   explore: [
@@ -27,6 +29,10 @@ const footerLinks = {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  // Café contact details are managed by the admin in Settings.
+  const settings = useQuery(api.cafe.listSettings);
+  const phone = settings?.phone ?? "+91 98765 43210";
+  const address = settings?.address ?? "42 Belgravia Lane, New Delhi";
 
   return (
     <footer className="bg-cafe-gradient text-white relative overflow-hidden">
@@ -86,11 +92,11 @@ export default function Footer() {
             <span>© 2026 The Belgravia Roast. All rights reserved.</span>
             <div className="flex items-center gap-1.5">
               <MapPin className="h-3 w-3" />
-              <span>42 Belgravia Lane, New Delhi</span>
+              <span>{address}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Phone className="h-3 w-3" />
-              <span>+91 98765 43210</span>
+              <span>{phone}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">

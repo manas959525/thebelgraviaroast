@@ -9,8 +9,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CoffeeSpillScene, SteamWisp, FloatingBean } from "@/components/CoffeeSpillScene";
 import { getBestSellers, getSignature, getPopular, type Product } from "@/data/menu";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurprise, getTodaySpecial, getTrending } from "@/lib/cafe";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
 const fadeUp = {
@@ -405,6 +408,13 @@ function LoyaltyTeaser() {
   );
 }
 
+// Fallback reviews shown when the database has no approved ones yet.
+const fallbackReviews = [
+  { name: "Ishita R.", text: "A premium café experience with beautifully crafted coffee and a warm, inviting atmosphere. The Belgravia Signature Roast is a must-try.", rating: 5 },
+  { name: "Arjun M.", text: "Every visit feels special. From the perfectly pulled espresso to the attentive staff, this place sets the standard for specialty coffee.", rating: 5 },
+  { name: "Sara K.", text: "Came for the coffee, stayed for the ambience. The hazelnut latte and the brownie combination is absolutely worth the trip.", rating: 5 },
+];
+
 // ── MAIN LANDING ────────────────────────────────────
 export default function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -413,26 +423,26 @@ export default function Landing() {
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  const { allProducts } = useProductsWithFlags();
+  const approvedReviews = useQuery(api.cafe.listApprovedReviews) ?? [];
+  const dbReviews = approvedReviews.length > 0
+    ? approvedReviews.slice(0, 3).map((r) => ({ name: r.name, text: r.text, rating: r.rating }))
+    : fallbackReviews;
+
   useEffect(() => {
     const timer = setTimeout(() => setIntroComplete(true), 3200);
     return () => clearTimeout(timer);
   }, []);
 
-  const bestSellers = getBestSellers().slice(0, 6);
-  const signature = getSignature();
-  const popular = getPopular().slice(0, 6);
+  const bestSellers = allProducts.filter((p) => p.badge === "bestseller").slice(0, 6);
+  const signature = allProducts.filter((p) => p.badge === "signature");
+  const popular = allProducts.filter((p) => p.rating >= 4.7).slice(0, 6);
 
   const features = [
     { icon: Award, title: "Specialty Grade Beans", desc: "Single-origin beans sourced from the world's finest estates" },
     { icon: Leaf, title: "Ethically Sourced", desc: "Direct-trade partnerships that support farming communities" },
     { icon: Coffee, title: "Freshly Prepared", desc: "Every drink made to order with precision and care" },
     { icon: ShieldCheck, title: "Quality Promise", desc: "If it isn't perfect, we'll remake it — no questions asked" },
-  ];
-
-  const reviews = [
-    { name: "Ishita R.", text: "A premium café experience with beautifully crafted coffee and a warm, inviting atmosphere. The Belgravia Signature Roast is a must-try.", rating: 5 },
-    { name: "Arjun M.", text: "Every visit feels special. From the perfectly pulled espresso to the attentive staff, this place sets the standard for specialty coffee.", rating: 5 },
-    { name: "Sara K.", text: "Came for the coffee, stayed for the ambience. The hazelnut latte and the brownie combination is absolutely worth the trip.", rating: 5 },
   ];
 
   return (
@@ -889,7 +899,7 @@ export default function Landing() {
             <motion.p variants={fadeUp} custom={1} className="text-white/40 mt-2">Loved by regulars and first-timers alike</motion.p>
           </motion.div>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {reviews.map((r, i) => (
+            {dbReviews.map((r, i) => (
               <motion.div key={i} variants={fadeUp} custom={i} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
                 <Quote className="h-8 w-8 text-dusty-rose/40 mb-4" />
                 <p className="text-white/60 text-sm leading-relaxed mb-6">{r.text}</p>

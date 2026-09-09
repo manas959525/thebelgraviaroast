@@ -6,11 +6,12 @@ import {
   QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
+  Power, PowerOff,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
-import { categories, products } from "@/data/menu";
+import { categories, products as staticProducts } from "@/data/menu";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
@@ -46,14 +47,6 @@ const sidebarItems: { id: AdminSection; label: string; icon: typeof LayoutDashbo
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-const mockOrders = [
-  { id: "TBR-A1B2C", time: "2 min ago", items: "2× Cappuccino, 1× Croissant", total: 347, status: "preparing" as const, table: 7 },
-  { id: "TBR-D3E4F", time: "5 min ago", items: "1× Margherita, 2× Cold Brew", total: 647, status: "ready" as const, table: 12 },
-  { id: "TBR-G5H6I", time: "8 min ago", items: "1× Avocado Toast, 1× Matcha Latte", total: 468, status: "confirmed" as const, table: 3 },
-  { id: "TBR-J7K8L", time: "12 min ago", items: "3× Masala Chai, 2× Samosa", total: 435, status: "delivered" as const, table: 5 },
-  { id: "TBR-M9N0P", time: "15 min ago", items: "1× Classic Burger, 1× Fries, 1× Frappé", total: 797, status: "pending" as const, table: 9 },
-];
-
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
   confirmed: "bg-blue-100 text-blue-700",
@@ -64,6 +57,8 @@ const statusColors = {
 };
 
 type BoardStatus = "pending" | "preparing" | "ready";
+
+type TableStatus = "available" | "occupied" | "reserved" | "bill_requested";
 
 interface BoardOrder {
   id: string;
@@ -80,7 +75,21 @@ const boardColumns: { key: BoardStatus; label: string; dot: string }[] = [
   { key: "ready", label: "READY", dot: "bg-green-400" },
 ];
 
+/** Kick off one-time seeding of default offers/tables/settings; safe to call repeatedly. */
+function useSeededCafe() {
+  const seed = useMutation(api.cafe.seedCafeData);
+  const offers = useQuery(api.cafe.listOffers);
+  const tables = useQuery(api.cafe.listTables);
+  const settings = useQuery(api.cafe.listSettings);
+  const ready = offers !== undefined && tables !== undefined && settings !== undefined;
+  if (ready && offers.length === 0 && tables.length === 0) {
+    void seed({});
+  }
+  return { ready };
+}
+
 function DashboardView() {
+  useSeededCafe();
   const convexOrders = useQuery(api.cafe.listOrders);
   const convexPayments = useQuery(api.cafe.listPayments);
   const convexRequests = useQuery(api.cafe.listServiceRequests);
@@ -104,25 +113,16 @@ function DashboardView() {
     { label: "Pending Verifications", value: `${pendingVerifications}`, change: pendingVerifications > 0 ? "needs review" : "all clear", icon: Calendar, color: "text-purple-500" },
   ];
 
-  const liveOrders: BoardOrder[] = orders.length
-    ? orders
-        .filter((o) => o.status !== "delivered" && o.status !== "cancelled")
-        .map((o) => ({
-          id: o.orderNumber ?? o._id,
-          time: timeAgo(o._creationTime),
-          items: o.items.map((it) => `${it.name} × ${it.quantity}`).join(", "),
-          total: o.total,
-          status: (o.status === "pending" || o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
-          table: o.tableNumber ?? "—",
-        }))
-    : mockOrders.filter((o) => o.status === "pending" || o.status === "confirmed" || o.status === "preparing" || o.status === "ready").map((o) => ({
-        id: o.id,
-        time: o.time,
-        items: o.items,
-        total: o.total,
-        status: (o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
-        table: o.table,
-      }));
+  const liveOrders: BoardOrder[] = orders
+    .filter((o) => o.status !== "delivered" && o.status !== "cancelled")
+    .map((o) => ({
+      id: o.orderNumber ?? o._id,
+      time: timeAgo(o._creationTime),
+      items: o.items.map((it) => `${it.name} × ${it.quantity}`).join(", "),
+      total: o.total,
+      status: (o.status === "pending" || o.status === "confirmed" ? "pending" : o.status) as BoardStatus,
+      table: o.tableNumber ?? "—",
+    }));
 
   const advance = async (id: string, status: BoardStatus) => {
     const order = orders.find((o) => (o.orderNumber ?? o._id) === id);
@@ -200,7 +200,7 @@ function DashboardView() {
                         <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{order.items}</p>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-sm">₹{order.total}</span>
-                          {col.key !== "ready" && orders.length > 0 && (
+                          {col.key !== "ready" && (
                             <button
                               onClick={() => advance(order.id, order.status)}
                               className="flex items-center gap-1 text-[10px] font-bold text-gold bg-gold/10 px-2 py-1 rounded-lg hover:bg-gold/20 transition-all"
@@ -322,47 +322,108 @@ function DashboardView() {
 
 function ProductsView() {
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [search, setSearch] = useState("");
+  const flagsQuery = useQuery(api.cafe.listProductFlags);
+  const setAvailability = useMutation(api.cafe.setProductAvailability);
+
+  // DB availability overrides win over the static catalog flag.
+  const flagMap = new Map((flagsQuery ?? []).map((f) => [f.productId, f.available]));
+  const effective = (id: string) => flagMap.get(id) ?? staticProducts.find((p) => p.id === id)?.available ?? true;
+
+  const filtered = staticProducts.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (categories.find((c) => c.id === p.category)?.name.toLowerCase().includes(search.toLowerCase()) ?? false),
+  );
+
+  const toggle = (id: string, name: string, next: boolean) => {
+    void setAvailability({ productId: id, available: next, note: next ? undefined : "Marked sold out by staff" });
+    toast.success(next ? `${name} is back on the menu` : `${name} marked sold out`);
+  };
+
+  const soldOutCount = staticProducts.filter((p) => !effective(p.id)).length;
+
+  const StatusChip = ({ id }: { id: string }) => (
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${effective(id) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+      {effective(id) ? "Available" : "Sold Out"}
+    </span>
+  );
+
+  const ToggleButtons = ({ p }: { p: (typeof staticProducts)[0] }) => (
+    <div className="flex gap-1">
+      {effective(p.id) ? (
+        <button
+          onClick={() => toggle(p.id, p.name, false)}
+          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all"
+        >
+          <PowerOff className="h-3 w-3" /> Mark Sold Out
+        </button>
+      ) : (
+        <button
+          onClick={() => toggle(p.id, p.name, true)}
+          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-sage hover:bg-green-50 transition-all"
+        >
+          <Power className="h-3 w-3" /> Mark Available
+        </button>
+      )}
+      <Link
+        to={`/menu/${p.slug}`}
+        className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-muted"
+        aria-label={`View ${p.name}`}
+      >
+        <Eye className="h-3 w-3" />
+      </Link>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Products</h2>
-          <p className="text-sm text-muted-foreground">{products.length} items in catalogue</p>
+          <h2 className="text-2xl font-bold text-foreground">Products & Availability</h2>
+          <p className="text-sm text-muted-foreground">
+            {staticProducts.length} items in catalogue · {soldOutCount} sold out · changes reach every menu instantly
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input type="text" placeholder="Search products..." className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-gold w-56" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-gold w-56"
+            />
           </div>
           <div className="flex border border-border rounded-lg overflow-hidden">
             <button onClick={() => setView("grid")} className={`p-2 ${view === "grid" ? "bg-gold text-white" : "bg-white"}`}><Grid3X3 className="h-4 w-4" /></button>
             <button onClick={() => setView("list")} className={`p-2 ${view === "list" ? "bg-gold text-white" : "bg-white"}`}><List className="h-4 w-4" /></button>
           </div>
-          <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
-            <Plus className="h-4 w-4" /> Add Product
-          </button>
         </div>
       </div>
 
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {products.slice(0, 12).map((p) => (
+          {filtered.map((p) => (
             <div key={p.id} className="bg-white rounded-2xl border border-border/50 overflow-hidden group">
               <div className="relative h-40 overflow-hidden">
-                <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <button className="h-7 w-7 rounded-lg bg-white/90 flex items-center justify-center hover:bg-white"><Edit className="h-3 w-3" /></button>
-                  <button className="h-7 w-7 rounded-lg bg-white/90 flex items-center justify-center hover:bg-red-50 text-red-500"><Trash2 className="h-3 w-3" /></button>
-                </div>
+                <img src={p.image} alt={p.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${!effective(p.id) ? "grayscale" : ""}`} />
+                {!effective(p.id) && (
+                  <div className="absolute inset-0 bg-navy/60 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out Today</span>
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-sm">{p.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.description}</p>
                 <div className="flex items-center justify-between mt-3">
                   <span className="font-bold">₹{p.discountPrice ?? p.price}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {p.available ? "Active" : "Disabled"}
-                  </span>
+                  <StatusChip id={p.id} />
+                </div>
+                <div className="mt-3">
+                  <ToggleButtons p={p} />
                 </div>
               </div>
             </div>
@@ -381,7 +442,7 @@ function ProductsView() {
               </tr>
             </thead>
             <tbody>
-              {products.slice(0, 12).map((p) => (
+              {filtered.map((p) => (
                 <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3 flex items-center gap-3">
                     <img src={p.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
@@ -392,18 +453,8 @@ function ProductsView() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{categories.find((c) => c.id === p.category)?.name}</td>
                   <td className="px-5 py-3 font-medium">₹{p.discountPrice ?? p.price}</td>
-                  <td className="px-5 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {p.available ? "Active" : "Disabled"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-1">
-                      <button className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-muted"><Eye className="h-3 w-3" /></button>
-                      <button className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-muted"><Edit className="h-3 w-3" /></button>
-                      <button className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500"><Trash2 className="h-3 w-3" /></button>
-                    </div>
-                  </td>
+                  <td className="px-5 py-3"><StatusChip id={p.id} /></td>
+                  <td className="px-5 py-3"><ToggleButtons p={p} /></td>
                 </tr>
               ))}
             </tbody>
@@ -647,34 +698,61 @@ function PaymentsView() {
 type TableStatus = "available" | "occupied" | "reserved" | "bill-requested";
 
 function TablesView() {
-  const [tables, setTables] = useState(() =>
-    Array.from({ length: 15 }, (_, i) => ({
-      number: i + 1,
-      capacity: [2, 2, 4, 4, 4, 6, 6, 8, 2, 4, 4, 6, 2, 4, 8][i],
-      status: (["available", "occupied", "reserved", "available", "available", "occupied", "available", "available", "bill-requested", "available", "occupied", "available", "available", "available", "available"] as TableStatus[])[i],
-      section: i < 5 ? "Indoor" : i < 10 ? "Terrace" : "Private",
-    })),
-  );
+  const dbTables = useQuery(api.cafe.listTables);
+  const setStatusMutation = useMutation(api.cafe.setTableStatus);
+  const saveTableMutation = useMutation(api.cafe.saveTable);
+  const deleteTableMutation = useMutation(api.cafe.deleteTable);
   const [selected, setSelected] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [newTable, setNewTable] = useState({ number: "", capacity: "4", section: "Indoor" });
+
+  const tables = (dbTables ?? []).map((t) => ({
+    number: t.number,
+    capacity: t.capacity,
+    status: t.status as TableStatus,
+    section: t.section,
+  }));
 
   const statusStyle: Record<TableStatus, string> = {
     available: "bg-green-100 border-green-300 text-green-700",
     occupied: "bg-red-100 border-red-300 text-red-700",
     reserved: "bg-yellow-100 border-yellow-300 text-yellow-700",
-    "bill-requested": "bg-blue-100 border-blue-300 text-blue-700",
+    bill_requested: "bg-blue-100 border-blue-300 text-blue-700",
   };
   const statusLabel: Record<TableStatus, string> = {
     available: "Available",
     occupied: "Occupied",
     reserved: "Reserved",
-    "bill-requested": "Bill Requested",
+    bill_requested: "Bill Requested",
   };
 
   const selectedTable = tables.find((t) => t.number === selected) ?? null;
 
+  // Open bills attached to each table, straight from the orders database.
+  const orders = useQuery(api.cafe.listOrders) ?? [];
+  const openOrdersFor = (number: number) =>
+    orders.filter(
+      (o) =>
+        o.tableNumber === number &&
+        o.status !== "delivered" &&
+        o.status !== "cancelled",
+    );
+
   const setStatus = (number: number, status: TableStatus) => {
-    setTables((prev) => prev.map((t) => (t.number === number ? { ...t, status } : t)));
+    void setStatusMutation({ number, status });
     toast.success(`Table #${number} marked ${statusLabel[status].toLowerCase()}`);
+  };
+
+  const addTable = () => {
+    const number = Number(newTable.number);
+    if (!number || number < 1) {
+      toast.error("Enter a valid table number");
+      return;
+    }
+    void saveTableMutation({ number, capacity: Number(newTable.capacity) || 4, section: newTable.section });
+    toast.success(`Table #${number} added`);
+    setAdding(false);
+    setNewTable({ number: "", capacity: "4", section: "Indoor" });
   };
 
   return (
@@ -682,18 +760,43 @@ function TablesView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Tables</h2>
-          <p className="text-sm text-muted-foreground">{tables.filter((t) => t.status === "available").length} available · {tables.filter((t) => t.status === "occupied").length} occupied</p>
+          <p className="text-sm text-muted-foreground">
+            {tables.filter((t) => t.status === "available").length} available · {tables.filter((t) => t.status !== "available").length} engaged · saved live to the café database
+          </p>
         </div>
-        <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
-          <Plus className="h-4 w-4" /> Add Table
+        <button
+          onClick={() => setAdding(!adding)}
+          className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold"
+        >
+          <Plus className="h-4 w-4" /> {adding ? "Cancel" : "Add Table"}
         </button>
       </div>
+
+      {adding && (
+        <div className="bg-white rounded-2xl border border-border/50 p-5 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="text-xs font-medium block mb-1">Table Number</label>
+            <input type="number" min={1} value={newTable.number} onChange={(e) => setNewTable({ ...newTable, number: e.target.value })} className="w-24 rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Seats</label>
+            <input type="number" min={1} value={newTable.capacity} onChange={(e) => setNewTable({ ...newTable, capacity: e.target.value })} className="w-24 rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Section</label>
+            <select value={newTable.section} onChange={(e) => setNewTable({ ...newTable, section: e.target.value })} className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold">
+              {["Indoor", "Terrace", "Private"].map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <button onClick={addTable} className="bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all">Save Table</button>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         {(Object.keys(statusLabel) as TableStatus[]).map((s) => (
           <span key={s} className="flex items-center gap-1.5">
-            <span className={`h-2.5 w-2.5 rounded-full ${statusStyle[s].split(" ")[0].replace("bg-", "bg-")}`} />
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--legend)]" style={{ "--legend": statusStyle[s].split(" ")[0] } as React.CSSProperties} />
             {statusLabel[s]}
           </span>
         ))}
@@ -712,6 +815,11 @@ function TablesView() {
             <div className="text-[10px] font-bold uppercase mt-2">{statusLabel[t.status]}</div>
           </button>
         ))}
+        {dbTables === undefined && (
+          <div className="col-span-full flex items-center justify-center py-6">
+            <div className="h-5 w-5 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Selected table detail */}
@@ -723,20 +831,56 @@ function TablesView() {
               <p className="text-xs text-muted-foreground">{selectedTable.capacity} seats · {selectedTable.section} · {statusLabel[selectedTable.status]}</p>
             </div>
             <div className="flex flex-wrap gap-2 sm:ml-auto">
-              <button onClick={() => setStatus(selectedTable.number, "available")} className="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 transition-all">Mark Available</button>
-              <button onClick={() => setStatus(selectedTable.number, "occupied")} className="text-xs font-semibold bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-all">Mark Occupied</button>
-              <button onClick={() => setStatus(selectedTable.number, "reserved")} className="text-xs font-semibold bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-lg hover:bg-yellow-200 transition-all">Reserve</button>
-              <button onClick={() => setStatus(selectedTable.number, "bill-requested")} className="text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-all">Bill Requested</button>
+              {(Object.keys(statusLabel) as TableStatus[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatus(selectedTable.number, s)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${statusStyle[s]} ${selectedTable.status === s ? "ring-1 ring-current" : ""}`}
+                >
+                  {statusLabel[s]}
+                </button>
+              ))}
+              <button
+                onClick={() => { void deleteTableMutation({ number: selectedTable.number }); toast.success(`Table #${selectedTable.number} removed`); setSelected(null); }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-all"
+              >
+                Remove
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-            <button onClick={() => toast.success(`Staff notified for Table #${selectedTable.number}`)} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
-              <Bell className="h-3.5 w-3.5 text-dusty-rose" /> Call Staff
-            </button>
-            <Link to="/table-ordering" className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
-              <QrCode className="h-3.5 w-3.5 text-gold" /> Table QR & Ordering
+          {(() => {
+            const open = openOrdersFor(selectedTable.number);
+            if (open.length === 0) {
+              return <p className="text-sm text-muted-foreground">No open orders at this table.</p>;
+            }
+            return (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Open orders</p>
+                {open.map((o) => (
+                  <div key={o._id} className="flex items-center justify-between rounded-xl border border-border/50 px-4 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <span className="font-mono font-bold text-xs mr-2">{o.orderNumber ?? o._id}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {o.items.map((it) => `${it.name} × ${it.quantity}`).join(", ")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="font-bold">₹{o.total}</span>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColors[o.status]}`}>{o.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mt-4">
+            <Link to={`/table-ordering?table=${selectedTable.number}`} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+              <QrCode className="h-3.5 w-3.5 text-gold" /> Open as This Table
             </Link>
-            <button onClick={() => toast.success(`Bill requested for Table #${selectedTable.number}`)} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+            <Link to="/dashboard" className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
+              <Bell className="h-3.5 w-3.5 text-dusty-rose" /> Service Requests
+            </Link>
+            <button onClick={() => setStatus(selectedTable.number, "bill_requested")} className="flex items-center justify-center gap-2 border border-border rounded-xl py-2.5 text-xs font-semibold hover:bg-muted transition-all">
               <DollarSign className="h-3.5 w-3.5 text-sage" /> Request Bill
             </button>
           </div>
@@ -826,51 +970,155 @@ function QRGeneratorView() {
 }
 
 function OffersView() {
-  const offers = [
-    { code: "BELGRAVIA10", desc: "10% Off First Order", active: true, used: 234 },
-    { code: "COMBO49", desc: "Combos at ₹499", active: true, used: 189 },
-    { code: "HAPPY3PM", desc: "Happy Hours 20% Off", active: true, used: 456 },
-    { code: "STUDENT15", desc: "15% Student Discount", active: true, used: 78 },
-    { code: "OLD2024", desc: "Expired Festival Offer", active: false, used: 1023 },
-  ];
+  useSeededCafe();
+  const dbOffers = useQuery(api.cafe.listOffers);
+  const saveOffer = useMutation(api.cafe.saveOffer);
+  const deleteOffer = useMutation(api.cafe.deleteOffer);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    code: "",
+    description: "",
+    tag: "Special",
+    discountType: "percentage" as "percentage" | "fixed",
+    discountValue: "10",
+    minOrder: "0",
+    maxDiscount: "",
+    days: "180",
+  });
+
+  const create = () => {
+    const code = form.code.trim().toUpperCase();
+    if (!code) {
+      toast.error("Give the coupon a code");
+      return;
+    }
+    void saveOffer({
+      code,
+      description: form.description.trim() || `${form.discountValue}${form.discountType === "percentage" ? "%" : "₹"} off`,
+      tag: form.tag,
+      discountType: form.discountType,
+      discountValue: Number(form.discountValue) || 0,
+      minOrder: Number(form.minOrder) || 0,
+      maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : undefined,
+      validUntil: Date.now() + (Number(form.days) || 30) * 86400000,
+      active: true,
+    });
+    toast.success(`Coupon ${code} is live`);
+    setCreating(false);
+    setForm({ code: "", description: "", tag: "Special", discountType: "percentage", discountValue: "10", minOrder: "0", maxDiscount: "", days: "180" });
+  };
+
+  const fmtDiscount = (o: { discountType: "percentage" | "fixed"; discountValue: number }) =>
+    o.discountType === "percentage" ? `${o.discountValue}%` : `₹${o.discountValue}`;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Offers & Coupons</h2>
-        <button className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold">
-          <Plus className="h-4 w-4" /> Create Offer
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Offers & Coupons</h2>
+          <p className="text-sm text-muted-foreground">These codes are validated live at checkout — edits take effect instantly.</p>
+        </div>
+        <button
+          onClick={() => setCreating(!creating)}
+          className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold"
+        >
+          <Plus className="h-4 w-4" /> {creating ? "Cancel" : "Create Offer"}
         </button>
       </div>
+
+      {creating && (
+        <div className="bg-white rounded-2xl border border-border/50 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-1">
+            <label className="text-xs font-medium block mb-1">Code</label>
+            <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="WELCOME10" className="w-full rounded-xl border border-border px-3 py-2 text-sm font-mono uppercase outline-none focus:border-gold" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium block mb-1">Description</label>
+            <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="10% off your first order" className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Type</label>
+            <select value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value as "percentage" | "fixed" })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold">
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed (₹)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Discount value</label>
+            <input type="number" min={1} value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Max discount (₹, optional)</label>
+            <input type="number" min={0} value={form.maxDiscount} onChange={(e) => setForm({ ...form, maxDiscount: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Min order (₹)</label>
+            <input type="number" min={0} value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Valid for (days)</label>
+            <input type="number" min={1} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Tag</label>
+            <select value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold">
+              {["New Guests", "Popular", "Afternoon", "Weekend", "Students", "Special"].map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-3 flex justify-end">
+            <button onClick={create} className="bg-gold text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all">Publish Coupon</button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left px-5 py-3 font-medium text-muted-foreground">Code</th>
-              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Description</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Discount</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Min Order</th>
               <th className="text-left px-5 py-3 font-medium text-muted-foreground">Used</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Valid Until</th>
               <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
               <th className="text-left px-5 py-3 font-medium text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {offers.map((o) => (
-              <tr key={o.code} className="border-b last:border-0">
-                <td className="px-5 py-3 font-mono font-bold">{o.code}</td>
-                <td className="px-5 py-3 text-muted-foreground">{o.desc}</td>
-                <td className="px-5 py-3">{o.used}</td>
-                <td className="px-5 py-3">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {o.active ? "Active" : "Expired"}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  <div className="flex gap-1">
-                    <button className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-muted"><Edit className="h-3 w-3" /></button>
-                    <button className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500"><Trash2 className="h-3 w-3" /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {(dbOffers ?? []).length === 0 ? (
+              <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">No coupons yet — create your first offer above.</td></tr>
+            ) : (
+              (dbOffers ?? []).map((o) => (
+                <tr key={o.code} className="border-b last:border-0">
+                  <td className="px-5 py-3 font-mono font-bold">{o.code}</td>
+                  <td className="px-5 py-3">{fmtDiscount(o)}{o.maxDiscount ? <span className="text-[10px] text-muted-foreground"> (max ₹{o.maxDiscount})</span> : null}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{o.minOrder > 0 ? `₹${o.minOrder}` : "—"}</td>
+                  <td className="px-5 py-3">{o.usedCount}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(o.validUntil).toLocaleDateString("en-IN")}</td>
+                  <td className="px-5 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {o.active ? "Active" : "Paused"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { void saveOffer({ code: o.code, description: o.description, title: o.title, tag: o.tag, discountType: o.discountType, discountValue: o.discountValue, minOrder: o.minOrder, maxDiscount: o.maxDiscount, validUntil: o.validUntil, active: !o.active }); toast.success(o.active ? `${o.code} paused` : `${o.code} re-activated`); }}
+                        className="h-7 px-2 rounded-lg border flex items-center gap-1 text-[10px] font-bold hover:bg-muted"
+                      >
+                        {o.active ? <><PowerOff className="h-3 w-3" /> Pause</> : <><Power className="h-3 w-3" /> Activate</>}
+                      </button>
+                      <button
+                        onClick={() => { void deleteOffer({ code: o.code }); toast.success(`${o.code} deleted`); }}
+                        className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

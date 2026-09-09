@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getProductBySlug, getProductsByCategory } from "@/data/menu";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { getComplements } from "@/lib/cafe";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
@@ -69,7 +70,11 @@ function PerfectWith({ product }: { product: ReturnType<typeof getProductBySlug>
 
 export default function ProductDetail() {
   const { slug } = useParams();
-  const product = getProductBySlug(slug || "");
+  const { isAvailable } = useProductsWithFlags();
+  const staticProduct = getProductBySlug(slug || "");
+  const product = staticProduct
+    ? { ...staticProduct, available: isAvailable(staticProduct.id) }
+    : null;
 
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | undefined>();

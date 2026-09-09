@@ -1,17 +1,20 @@
 import { QRCodeSVG } from "qrcode.react";
 
-const UPI_ID = "7728059988@ptyes";
-const CAFÉ_NAME = "THE BELGRAVIA ROAST";
+/** Defaults used until the café configures its UPI ID in admin Settings. */
+const DEFAULT_UPI_ID = "7728059988@ptyes";
+const DEFAULT_CAFE_NAME = "THE BELGRAVIA ROAST";
 
 /**
  * Build a standard UPI payment URI. Scanning this with any UPI app
  * (Paytm, PhonePe, GPay, BHIM, ...) opens a payment sheet for this
  * account, with the order amount and note pre-filled when available.
  */
-export function buildUpiUri(opts: { amount?: number; orderId?: string } = {}) {
+export function buildUpiUri(
+  opts: { amount?: number; orderId?: string; upiId?: string; cafeName?: string } = {},
+) {
   const params = new URLSearchParams({
-    pa: UPI_ID,
-    pn: CAFÉ_NAME,
+    pa: opts.upiId?.trim() || DEFAULT_UPI_ID,
+    pn: opts.cafeName?.trim() || DEFAULT_CAFE_NAME,
     cu: "INR",
   });
   if (opts.amount && opts.amount > 0) {
@@ -24,12 +27,22 @@ export function buildUpiUri(opts: { amount?: number; orderId?: string } = {}) {
 }
 
 /**
- * Placeholder QR code rendered when the owner's real UPI QR image
- * (public/manasqrcode.jpeg) is not present in the project yet.
- * It encodes the same UPI account, so customers can still scan and pay.
+ * Generated QR used when the owner's real UPI QR image
+ * (public/manasqrcode.jpeg) is not present in the project. When an
+ * upiId from Settings is provided, it always wins over the default.
  */
-export function UpiQrCode({ amount, orderId }: { amount?: number; orderId?: string }) {
-  const value = buildUpiUri({ amount, orderId });
+export function UpiQrCode({
+  amount,
+  orderId,
+  upiId,
+  cafeName,
+}: {
+  amount?: number;
+  orderId?: string;
+  upiId?: string;
+  cafeName?: string;
+}) {
+  const value = buildUpiUri({ amount, orderId, upiId, cafeName });
   return (
     <QRCodeSVG
       value={value}

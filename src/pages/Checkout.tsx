@@ -2,43 +2,47 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Truck, Store, ChevronRight, Check, Tag, Sparkles, X } from "lucide-react";
+import { useQuery, useConvex } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
-
-const COUPONS: Record<string, { label: string; pct: number; cap: number }> = {
-  BELGRAVIA10: { label: "10% off your first order", pct: 0.1, cap: 200 },
-  STUDENT15: { label: "15% student discount", pct: 0.15, cap: 150 },
-  HAPPY3PM: { label: "Happy hours — 20% off", pct: 0.2, cap: 100 },
-};
 
 const steps = ["Cart", "Details", "Pay", "Track"];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { items, total } = useCart();
+  const settings = useQuery(api.cafe.listSettings);
   const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | "delivery">("dine-in");
   const [tableNumber, setTableNumber] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", address: "", notes: "" });
   const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState<{ code: string; label: string; pct: number; cap: number } | null>(null);
+  const [coupon, setCoupon] = useState<{ code: string; label: string; discount: number } | null>(null);
   const [couponError, setCouponError] = useState("");
+  const convex = useConvex();
 
-  const tax = Math.round(total * 0.05);
-  const discount = coupon ? Math.min(Math.round(total * coupon.pct), coupon.cap) : 0;
+  const taxRate = Number(settings?.taxRate ?? "5") / 100;
+  const tax = Math.round(total * taxRate);
+  const discount = coupon?.discount ?? 0;
   const grandTotal = total + tax - discount;
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
-    const found = COUPONS[code];
-    if (found) {
-      setCoupon({ code, ...found });
-      setCouponError("");
-      toast.success(`Coupon ${code} applied`);
-    } else {
-      setCouponError("That code isn't valid — try BELGRAVIA10");
+    try {
+      const result = await convex.query(api.cafe.validateCoupon, { code, subtotal: total });
+      if (result.ok) {
+        setCoupon({ code: result.code, label: result.description, discount: result.discount });
+        setCouponError("");
+        toast.success(`Coupon ${result.code} applied — you save ₹${result.discount}`);
+      } else {
+        setCoupon(null);
+        setCouponError(result.error);
+      }
+    } catch {
+      setCouponError("Couldn't reach the coupon service — try again.");
     }
   };
 

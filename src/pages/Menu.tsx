@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Clock, Star, Leaf, Heart, Flame, Sparkles, ChevronRight, Coffee } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { categories, products, type Product } from "@/data/menu";
+import { categories, type Product } from "@/data/menu";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
-import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurprise } from "@/lib/cafe";
+import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks } from "@/lib/cafe";
 import { isFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
 
@@ -159,11 +160,12 @@ export default function MenuPage() {
   const [showVegOnly, setShowVegOnly] = useState(false);
   const [surprise, setSurprise] = useState<Product | null>(null);
   const [rolling, setRolling] = useState(false);
+  const { allProducts } = useProductsWithFlags();
 
   const daypartPicks = useMemo(() => getDaypartPicks(), []);
 
   const filtered = useMemo(() => {
-    let result = products;
+    let result = allProducts;
     if (selectedCategory) {
       const cat = categories.find((c) => c.slug === selectedCategory);
       if (cat) result = result.filter((p) => p.category === cat.id);
@@ -179,7 +181,7 @@ export default function MenuPage() {
       );
     }
     return result;
-  }, [selectedCategory, showVegOnly, search]);
+  }, [allProducts, selectedCategory, showVegOnly, search]);
 
   const handleCategoryClick = (slug: string | null) => {
     setSelectedCategory(slug);
@@ -194,7 +196,8 @@ export default function MenuPage() {
     setRolling(true);
     setSurprise(null);
     setTimeout(() => {
-      setSurprise(getSurprise());
+      const availablePool = allProducts.filter((p) => p.available);
+      setSurprise(availablePool[Math.floor(Math.random() * availablePool.length)] ?? null);
       setRolling(false);
     }, 650);
   };
