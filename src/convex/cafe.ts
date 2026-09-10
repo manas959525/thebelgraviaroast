@@ -179,6 +179,35 @@ export const resolveServiceRequest = mutation({
   },
 });
 
+// ─────────────────────────────────────────────────────
+// Smart upselling events
+// ─────────────────────────────────────────────────────
+
+export const recordUpsellEvent = mutation({
+  args: {
+    comboId: v.string(),
+    mainId: v.string(),
+    pairId: v.string(),
+    value: v.number(),
+    savings: v.number(),
+    accepted: v.boolean(),
+    orderNumber: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("upsellEvents", {
+      ...args,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listUpsellEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("upsellEvents").order("desc").take(500);
+  },
+});
+
 export const listServiceRequests = query({
   args: {},
   handler: async (ctx) => {

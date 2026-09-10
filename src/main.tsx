@@ -89,6 +89,13 @@ class RootErrorBoundary extends React.Component<
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
+// PWA: register the service worker (network-first — safe with the dev preview).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {

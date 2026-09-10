@@ -198,6 +198,18 @@ const schema = defineSchema(
       rating: v.optional(v.number()),
       approved: v.boolean(),
     }).index("by_user", ["userId"]),
+
+    // Smart-upsell events: which combo was shown / accepted and its value.
+    upsellEvents: defineTable({
+      comboId: v.string(),
+      mainId: v.string(),
+      pairId: v.string(),
+      value: v.number(),
+      savings: v.number(),
+      accepted: v.boolean(),
+      orderNumber: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("by_accepted", ["accepted"]).index("by_createdAt", ["createdAt"]),
   },
   {
     schemaValidation: false,

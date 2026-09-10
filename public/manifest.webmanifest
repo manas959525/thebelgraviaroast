@@ -1,17 +1,25 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "The Belgravia Roast — Premium Specialty Café",
+  "short_name": "Belgravia Roast",
+  "description": "Order coffee, food and more from The Belgravia Roast. Table ordering, takeaway and delivery with UPI payment.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#1B2A3D",
+  "categories": ["food", "shopping", "lifestyle"],
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/logo.svg",
       "sizes": "any",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }

@@ -1,14 +1,17 @@
 import { useParams, Link } from "react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, Sparkles, BadgePercent } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getProductBySlug, getProductsByCategory } from "@/data/menu";
 import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { getComplements } from "@/lib/cafe";
+import { getComboFor } from "@/lib/combos";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
 function FavoriteButton({ product }: { product: { id: string; name: string } }) {
@@ -80,6 +83,22 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string | undefined>();
   const [selectedMilk, setSelectedMilk] = useState<string | undefined>();
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const recordUpsell = useMutation(api.cafe.recordUpsellEvent);
+
+  const combo = product ? getComboFor(product) : null;
+  useEffect(() => {
+    // Fire-and-forget: log that this combo offer was shown (for admin analytics).
+    if (!combo) return;
+    recordUpsell({
+      comboId: combo.id,
+      mainId: combo.main.id,
+      pairId: combo.pair.id,
+      value: combo.comboPrice,
+      savings: combo.savings,
+      accepted: false,
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combo?.id]);
 
   if (!product) {
     return (
@@ -332,6 +351,64 @@ export default function ProductDetail() {
                   </button>
                 </div>
               </div>
+
+              {/* Combo upsell */}
+              {combo && product.available && (
+                <div className="mb-5 bg-cafe-gradient rounded-2xl p-4 relative overflow-hidden">
+                  <div className="absolute -top-8 -right-8 w-28 h-28 bg-gold/20 rounded-full blur-2xl" />
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <BadgePercent className="h-3.5 w-3.5 text-gold" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
+                        {combo.label} — make it a combo
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <img src={combo.pair.image} alt={combo.pair.name} className="h-14 w-14 rounded-xl object-cover border-2 border-white/30" />
+                        <span className="absolute -top-1.5 -right-1.5 bg-gold text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          +1
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-semibold text-sm truncate">
+                          {product.name} + {combo.pair.name}
+                        </div>
+                        <div className="text-white/60 text-xs mt-0.5">
+                          <span className="line-through mr-1.5">₹{combo.original}</span>
+                          <span className="text-white font-bold text-sm">₹{combo.comboPrice}</span>
+                          <span className="ml-1.5 bg-green-400/20 text-green-300 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                            SAVE ₹{combo.savings}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        addToCart(product, quantity, {
+                          selectedSize,
+                          selectedMilk,
+                          addOns: selectedAddOns.length ? selectedAddOns : undefined,
+                        });
+                        addToCart(combo.pair, 1);
+                        recordUpsell({
+                          comboId: combo.id,
+                          mainId: combo.main.id,
+                          pairId: combo.pair.id,
+                          value: combo.comboPrice,
+                          savings: combo.savings,
+                          accepted: true,
+                        }).catch(() => {});
+                        toast.success(`Combo added — you saved ₹${combo.savings}`);
+                      }}
+                      className="mt-3 w-full bg-white text-navy py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-cream transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      ADD COMBO — ₹{combo.comboPrice}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Add to Cart */}
               {!product.available ? (

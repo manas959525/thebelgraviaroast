@@ -9,6 +9,7 @@ import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks } from "@/lib/cafe";
 import { isFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
+import VoiceOrder from "@/components/VoiceOrder";
 import { toast } from "sonner";
 
 const fadeUp = {
@@ -158,6 +159,11 @@ export default function MenuPage() {
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get("cat"));
   const [showVegOnly, setShowVegOnly] = useState(false);
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+  const [showBestSellers, setShowBestSellers] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<"popular" | "price-asc" | "price-desc" | "rating">("popular");
   const [surprise, setSurprise] = useState<Product | null>(null);
   const [rolling, setRolling] = useState(false);
   const { allProducts } = useProductsWithFlags();
@@ -171,6 +177,10 @@ export default function MenuPage() {
       if (cat) result = result.filter((p) => p.category === cat.id);
     }
     if (showVegOnly) result = result.filter((p) => p.isVeg);
+    if (showAvailableOnly) result = result.filter((p) => p.available);
+    if (showBestSellers) result = result.filter((p) => p.badge === "bestseller" || p.bestSeller);
+    if (showNew) result = result.filter((p) => p.badge === "new");
+    if (maxPrice !== null) result = result.filter((p) => (p.discountPrice ?? p.price) <= maxPrice);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -180,8 +190,17 @@ export default function MenuPage() {
           p.tags.some((t) => t.includes(q)),
       );
     }
+    if (sortBy === "price-asc") result = [...result].sort((a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price));
+    if (sortBy === "price-desc") result = [...result].sort((a, b) => (b.discountPrice ?? b.price) - (a.discountPrice ?? a.price));
+    if (sortBy === "rating") result = [...result].sort((a, b) => b.rating - a.rating);
+    if (sortBy === "popular") {
+      result = [...result].sort((a, b) =>
+        Number(b.badge === "bestseller" || b.bestSeller) - Number(a.badge === "bestseller" || a.bestSeller) ||
+        b.rating - a.rating,
+      );
+    }
     return result;
-  }, [allProducts, selectedCategory, showVegOnly, search]);
+  }, [allProducts, selectedCategory, showVegOnly, showAvailableOnly, showBestSellers, showNew, maxPrice, search, sortBy]);
 
   const handleCategoryClick = (slug: string | null) => {
     setSelectedCategory(slug);
@@ -294,6 +313,7 @@ export default function MenuPage() {
             >
               <Coffee className="h-4 w-4" /> Build Your Drink
             </Link>
+            <VoiceOrder />
           </div>
 
           {/* Surprise reveal */}
@@ -341,28 +361,90 @@ export default function MenuPage() {
         </motion.div>
 
         {/* Search & Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search dishes, ingredients..."
-              className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-            />
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search dishes, ingredients..."
+                className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+              />
+            </div>
+            <div className="flex gap-3">
+              <select
+                value={maxPrice === null ? "any" : String(maxPrice)}
+                onChange={(e) => setMaxPrice(e.target.value === "any" ? null : Number(e.target.value))}
+                className="rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-gold"
+                aria-label="Price range"
+              >
+                <option value="any">Any price</option>
+                <option value="120">Under ₹120</option>
+                <option value="150">Under ₹150</option>
+                <option value="200">Under ₹200</option>
+                <option value="250">Under ₹250</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-gold"
+                aria-label="Sort by"
+              >
+                <option value="popular">Most popular</option>
+                <option value="rating">Highest rated</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+              </select>
+            </div>
           </div>
-          <button
-            onClick={() => setShowVegOnly(!showVegOnly)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-              showVegOnly
-                ? "bg-green-50 border-green-300 text-green-700"
-                : "bg-white border-border text-foreground/70 hover:border-border"
-            }`}
-          >
-            <Leaf className="h-4 w-4" />
-            Veg Only
-          </button>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => setShowVegOnly(!showVegOnly)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                showVegOnly
+                  ? "bg-green-50 border-green-300 text-green-700"
+                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+              }`}
+            >
+              <Leaf className="h-3.5 w-3.5" />
+              Veg Only
+            </button>
+            <button
+              onClick={() => setShowAvailableOnly(!showAvailableOnly)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                showAvailableOnly
+                  ? "bg-sage/15 border-sage/40 text-sage"
+                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+              Available now
+            </button>
+            <button
+              onClick={() => setShowBestSellers(!showBestSellers)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                showBestSellers
+                  ? "bg-dusty-rose/15 border-dusty-rose/40 text-dusty-rose"
+                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+              }`}
+            >
+              <Star className="h-3.5 w-3.5 fill-current" />
+              Best Sellers
+            </button>
+            <button
+              onClick={() => setShowNew(!showNew)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                showNew
+                  ? "bg-gold/15 border-gold/40 text-gold"
+                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              New arrivals
+            </button>
+          </div>
         </div>
 
         {/* Category Pills */}
