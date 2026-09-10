@@ -27,6 +27,7 @@ const Contact = lazy(() => import("./pages/Contact.tsx"));
 const TableOrdering = lazy(() => import("./pages/TableOrdering.tsx"));
 const BuildYourDrink = lazy(() => import("./pages/BuildYourDrink.tsx"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
+const Kitchen = lazy(() => import("./pages/Kitchen.tsx"));
 
 function RouteLoading() {
   return (
@@ -153,6 +154,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <AdminDashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/kitchen"
+                element={
+                  <RequireAuth>
+                    <Kitchen />
                   </RequireAuth>
                 }
               />

@@ -4,8 +4,9 @@ import { Link, useNavigate } from "react-router";
 import {
   ArrowRight, Star, Award, Leaf, Coffee,
   ChevronRight, Sparkles, ShieldCheck, Quote, ChevronDown,
-  Store, MapPin, Truck, Flame,
+  Store, MapPin, Truck, Flame, QrCode, Check,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CoffeeSpillScene, SteamWisp, FloatingBean } from "@/components/CoffeeSpillScene";
@@ -210,7 +211,7 @@ function HowToOrder() {
                 variants={fadeUp}
                 custom={i}
                 onClick={() => handle(opt.mode)}
-                className={`group relative flex items-center gap-4 sm:flex-col sm:items-start sm:gap-3 bg-white rounded-2xl border border-border/50 p-5 sm:p-6 text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${opt.ring}`}
+                className={`group relative flex items-center gap-4 sm:flex-col sm:items-start sm:gap-3 glass-liquid liquid-sheen-slow rounded-2xl p-5 sm:p-6 text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${opt.ring}`}
               >
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors duration-300 ${opt.iconBg}`}>
                   <Icon className="h-6 w-6" />
@@ -229,6 +230,74 @@ function HowToOrder() {
             );
           })}
         </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── Find Your Table ────────────────────────────────
+function FindYourTable() {
+  const qrUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/table-ordering`
+      : "https://thebelgraviaroast.in/table-ordering";
+  const perks = [
+    "Order straight from your seat — no app, no sign-up",
+    "Watch your order progress live on your phone",
+    "Call staff, request water or the bill in one tap",
+  ];
+  return (
+    <section className="py-16 sm:py-20 bg-cafe-gradient text-white relative overflow-hidden">
+      <div className="liquid-blob w-96 h-96 -top-32 -right-24 bg-dusty-rose/20" />
+      <div className="liquid-blob liquid-blob-slow w-96 h-96 -bottom-40 -left-24 bg-gold/15" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+            <div className="inline-flex items-center gap-2 bg-sage/15 rounded-full px-4 py-1.5 mb-4">
+              <QrCode className="h-3.5 w-3.5 text-white/90" />
+              <span className="text-xs font-semibold text-white/90 uppercase tracking-wider">Order from your table</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">Your table, your phone.</h2>
+            <p className="text-white/60 leading-relaxed mb-6 max-w-md">
+              Every table at The Belgravia Roast carries its own QR code. Scan it, browse the full menu,
+              and order in a few taps — the kitchen gets it instantly, and your table's bill stays in sync.
+            </p>
+            <ul className="space-y-3 mb-8">
+              {perks.map((perk, i) => (
+                <motion.li
+                  key={perk}
+                  initial={{ opacity: 0, x: -12 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.15 * i }}
+                  className="flex items-center gap-3 text-sm text-white/70"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sage/20 text-sage border border-sage/30">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  {perk}
+                </motion.li>
+              ))}
+            </ul>
+            <Link to="/table-ordering" className="btn-brand liquid-sheen inline-flex items-center gap-2">
+              Try Table Ordering <ArrowRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="justify-self-center"
+          >
+            <div className="glass-liquid-dark rounded-3xl p-8 sm:p-10 text-center">
+              <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-5">Scan to start</div>
+              <QRCodeSVG value={qrUrl} size={190} bgColor="transparent" fgColor="#FAF7F2" level="M" className="mx-auto rounded-2xl" />
+              <div className="mt-5 font-display text-lg font-bold">THE BELGRAVIA ROAST</div>
+              <div className="text-xs text-white/40 mt-1">/table-ordering</div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -256,8 +325,8 @@ function TodaySpecial({ settings }: { settings?: Record<string, string> | null }
           variants={stagger}
           className="relative rounded-3xl overflow-hidden bg-cafe-gradient text-white"
         >
-          <div className="absolute -top-24 -right-24 w-80 h-80 bg-dusty-rose/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-gold/20 rounded-full blur-3xl" />
+          <div className="liquid-blob w-80 h-80 -top-24 -right-24 bg-dusty-rose/25" />
+          <div className="liquid-blob liquid-blob-slow w-96 h-96 -bottom-32 -left-16 bg-gold/25" />
           <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0 items-stretch">
             <div className="p-8 sm:p-12">
               <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-amber-400/15 border border-amber-300/30 rounded-full px-4 py-1.5 mb-4">
@@ -320,7 +389,7 @@ function TodaySpecial({ settings }: { settings?: Record<string, string> | null }
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.5 }}
-                className="absolute bottom-5 right-5 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-3"
+                className="absolute bottom-5 right-5 glass-liquid-dark rounded-2xl px-4 py-3"
               >
                 <div className="text-[10px] uppercase tracking-wider text-white/50 mb-0.5">Only {remaining} left today</div>
                 <div className="h-1.5 w-36 bg-white/15 rounded-full overflow-hidden">
@@ -552,7 +621,7 @@ function LoyaltyTeaser() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center hover:border-amber-300/30 transition-colors"
+                className="glass-liquid-dark rounded-2xl p-6 text-center hover:border-amber-300/30 transition-colors"
               >
                 <div className="text-3xl mb-2">{r.emoji}</div>
                 <div className="font-bold text-white mb-1">{r.points} pts</div>
@@ -621,6 +690,13 @@ export default function Landing() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_20%,rgba(184,128,138,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1400&h=900&fit=crop')] bg-cover bg-center opacity-[0.07]" />
         </motion.div>
+
+        {/* Liquid glass backdrop — morphing pools of light */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div className="liquid-blob w-[32rem] h-[32rem] -top-44 -left-32 bg-gold/25" />
+          <div className="liquid-blob liquid-blob-slow w-[28rem] h-[28rem] top-1/3 -right-40 bg-dusty-rose/20" />
+          <div className="liquid-blob liquid-blob-fast w-80 h-80 bottom-8 left-1/3 bg-sage/15" />
+        </div>
 
         {/* Floating beans — more, varied sizes */}
         <FloatingBean className="top-28 left-[8%] opacity-20" delay={0} />
@@ -800,13 +876,13 @@ export default function Landing() {
               className="flex flex-wrap gap-4 mb-16"
             >
               <motion.div animate={{ boxShadow: ["0 4px 15px rgba(168,132,92,0.25)", "0 4px 25px rgba(168,132,92,0.4)", "0 4px 15px rgba(168,132,92,0.25)"] }} transition={{ duration: 3, repeat: Infinity }} className="inline-flex rounded-xl">
-                <Link to="/menu" className="btn-brand inline-flex items-center gap-2">
+                <Link to="/menu" className="btn-brand liquid-sheen inline-flex items-center gap-2">
                   Explore the Menu <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
               <Link
                 to="/menu"
-                className="inline-flex items-center gap-2 border border-white/20 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
+                className="glass-liquid-dark liquid-sheen-slow inline-flex items-center gap-2 border border-white/15 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
               >
                 Order Now
               </Link>
@@ -817,7 +893,7 @@ export default function Landing() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 4.2, duration: 0.6 }}
-              className="flex flex-wrap items-center gap-x-8 gap-y-4"
+              className="flex flex-wrap items-center gap-x-6 sm:gap-x-8 gap-y-4 glass-liquid-dark rounded-2xl px-5 sm:px-6 py-4"
             >
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -914,6 +990,9 @@ export default function Landing() {
 
       {/* ══════════ HOW DO YOU WANT TO ORDER? ══════════ */}
       <HowToOrder />
+
+      {/* ══════════ FIND YOUR TABLE ══════════ */}
+      <FindYourTable />
 
       {/* ══════════ TODAY'S SPECIAL ══════════ */}
       <TodaySpecial settings={settings} />

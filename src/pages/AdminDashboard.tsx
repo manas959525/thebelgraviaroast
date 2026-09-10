@@ -6,7 +6,7 @@ import {
   QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
-  Power, PowerOff,
+  Power, PowerOff, ChefHat, ExternalLink,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
@@ -136,8 +136,20 @@ function DashboardView() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">{daypartGreeting()}, Admin 👋</h2>
-        <p className="text-sm text-muted-foreground">Today's overview at a glance</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">{daypartGreeting()}, Admin 👋</h2>
+            <p className="text-sm text-muted-foreground">Today's overview at a glance</p>
+          </div>
+          <Link
+            to="/kitchen"
+            className="inline-flex items-center gap-2 bg-cafe-gradient text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
+          >
+            <ChefHat className="h-4 w-4 text-amber-300" />
+            Kitchen Display
+            <ExternalLink className="h-3 w-3 text-white/50" />
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
