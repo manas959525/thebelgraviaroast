@@ -1,9 +1,10 @@
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   ArrowRight, Star, Award, Leaf, Coffee,
   ChevronRight, Sparkles, ShieldCheck, Quote, ChevronDown,
+  Store, MapPin, Truck, Flame,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,6 +16,47 @@ import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurpris
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
+
+// ── Order-mode helpers (shared with Checkout) ───────
+export const ORDER_MODE_KEY = "tbr-order-mode";
+
+export function chooseOrderMode(mode: "dine-in" | "takeaway" | "delivery") {
+  try {
+    window.localStorage.setItem(ORDER_MODE_KEY, mode);
+  } catch {
+    /* storage blocked — mode just won't be pre-selected at checkout */
+  }
+}
+
+function parseTime(t?: string): number | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function formatClock(t?: string): string {
+  if (!t) return "";
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
+  if (!m) return t;
+  let h = Number(m[1]);
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h} ${suffix}`;
+}
+
+function isCafeOpen(openTime?: string, closeTime?: string): boolean {
+  if (!openTime || !closeTime) return true; // unset — assume open
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const open = parseTime(openTime) ?? 0;
+  const close = parseTime(closeTime) ?? 24 * 60;
+  if (close <= open) {
+    // Overnight hours (e.g. 22:00 → 02:00)
+    return mins >= open || mins < close;
+  }
+  return mins >= open && mins < close;
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -96,9 +138,108 @@ function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[
   );
 }
 
+// ── How do you want to order? ─────────────────────
+function HowToOrder() {
+  const navigate = useNavigate();
+  const options = [
+    {
+      mode: "dine-in" as const,
+      title: "Dine In",
+      desc: "Order directly from your table",
+      icon: Store,
+      chip: "Scan & order",
+      iconBg: "bg-sage/10 text-sage group-hover:bg-sage group-hover:text-white",
+      ring: "hover:border-sage/50",
+    },
+    {
+      mode: "takeaway" as const,
+      title: "Takeaway",
+      desc: "Skip the queue, pick up in minutes",
+      icon: MapPin,
+      chip: "Ready when you are",
+      iconBg: "bg-gold/10 text-gold group-hover:bg-gold group-hover:text-white",
+      ring: "hover:border-gold/50",
+    },
+    {
+      mode: "delivery" as const,
+      title: "Delivery",
+      desc: "Enjoy the roast at home",
+      icon: Truck,
+      chip: "Brought to your door",
+      iconBg: "bg-dusty-rose/10 text-dusty-rose group-hover:bg-dusty-rose group-hover:text-white",
+      ring: "hover:border-dusty-rose/50",
+    },
+  ];
+
+  const handle = (mode: "dine-in" | "takeaway" | "delivery") => {
+    chooseOrderMode(mode);
+    navigate(mode === "dine-in" ? "/table-ordering" : "/menu");
+  };
+
+  return (
+    <section className="py-14 sm:py-16 bg-warm-gradient border-y border-border/40">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="text-center mb-8"
+        >
+          <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-sage/10 rounded-full px-4 py-1.5 mb-3">
+            <Coffee className="h-3.5 w-3.5 text-sage" />
+            <span className="text-xs font-semibold text-sage uppercase tracking-wider">How do you want to order?</span>
+          </motion.div>
+          <motion.h2 variants={fadeUp} custom={1} className="text-2xl sm:text-3xl font-bold text-foreground">
+            Pick your experience
+          </motion.h2>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+        >
+          {options.map((opt, i) => {
+            const Icon = opt.icon;
+            return (
+              <motion.button
+                key={opt.mode}
+                variants={fadeUp}
+                custom={i}
+                onClick={() => handle(opt.mode)}
+                className={`group relative flex items-center gap-4 sm:flex-col sm:items-start sm:gap-3 bg-white rounded-2xl border border-border/50 p-5 sm:p-6 text-left transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${opt.ring}`}
+              >
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-colors duration-300 ${opt.iconBg}`}>
+                  <Icon className="h-6 w-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-foreground">{opt.title}</span>
+                    <span className="hidden sm:inline-flex text-[9px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                      {opt.chip}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-1 transition-all shrink-0" />
+              </motion.button>
+            );
+          })}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
 // ── Today's Special ────────────────────────────────
-function TodaySpecial() {
+function TodaySpecial({ settings }: { settings?: Record<string, string> | null }) {
   const { product, discountPrice, remaining } = getTodaySpecial();
+  const openNow = isCafeOpen(settings?.openTime, settings?.closeTime);
+  const prepMin = Number(settings?.avgPrepMinutes ?? "12") || 12;
+  const openLabel = openNow ? `${formatClock(settings?.openTime ?? "08:00")} – ${formatClock(settings?.closeTime ?? "23:00")}` : `Opens ${formatClock(settings?.openTime ?? "08:00")}`;
   const handleOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -129,17 +270,34 @@ function TodaySpecial() {
               <motion.h2 variants={fadeUp} custom={1} className="font-display text-3xl sm:text-4xl font-bold mb-3">
                 {product.name}
               </motion.h2>
-              <motion.p variants={fadeUp} custom={2} className="text-white/60 leading-relaxed mb-6 max-w-md">
+              <motion.p variants={fadeUp} custom={2} className="text-white/60 leading-relaxed mb-4 max-w-md">
                 {product.description} Aromatic, warm, and only available at this price today.
               </motion.p>
-              <motion.div variants={fadeUp} custom={3} className="flex items-baseline gap-3 mb-6">
+
+              {/* Live café status — driven by admin settings */}
+              <motion.div variants={fadeUp} custom={3} className="flex flex-wrap items-center gap-2 mb-6">
+                <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${openNow ? "bg-sage/20 text-white/90" : "bg-white/10 text-white/50"}`}>
+                  <span className={`relative flex h-1.5 w-1.5 ${openNow ? "" : "hidden"}`}>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-sage" />
+                  </span>
+                  {openNow ? `Open now · ${openLabel}` : `Closed · ${openLabel}`}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/10 text-white/60">
+                  <Coffee className="h-3 w-3" /> Avg. prep {prepMin} min
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/10 text-white/60">
+                  <Flame className="h-3 w-3 text-amber-300" /> Trending today
+                </span>
+              </motion.div>
+              <motion.div variants={fadeUp} custom={4} className="flex items-baseline gap-3 mb-6">
                 <span className="text-4xl font-bold text-amber-300">₹{discountPrice}</span>
                 <span className="text-lg text-white/40 line-through">₹{product.price}</span>
                 <span className="text-xs font-semibold bg-amber-400/15 text-amber-200 px-2.5 py-1 rounded-full">
                   {Math.round(((product.price - discountPrice) / product.price) * 100)}% OFF
                 </span>
               </motion.div>
-              <motion.div variants={fadeUp} custom={4} className="flex flex-wrap items-center gap-4">
+              <motion.div variants={fadeUp} custom={5} className="flex flex-wrap items-center gap-4">
                 <button onClick={handleOrder} className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-navy px-7 py-3.5 rounded-xl text-sm font-bold transition-all hover:shadow-xl hover:shadow-amber-400/20 hover:-translate-y-0.5">
                   Order Now <ArrowRight className="h-4 w-4" />
                 </button>
@@ -423,6 +581,12 @@ export default function Landing() {
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  const settings = useQuery(api.cafe.listSettings);
+  const openNow = isCafeOpen(settings?.openTime, settings?.closeTime);
+  const prepMin = Number(settings?.avgPrepMinutes ?? "12") || 12;
+  const openTimeLabel = formatClock(settings?.openTime ?? "08:00");
+  const closeTimeLabel = formatClock(settings?.closeTime ?? "23:00");
+
   const { allProducts } = useProductsWithFlags();
   const approvedReviews = useQuery(api.cafe.listApprovedReviews) ?? [];
   const dbReviews = approvedReviews.length > 0
@@ -666,8 +830,10 @@ export default function Landing() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sage" />
                 </span>
                 <div>
-                  <div className="text-lg font-bold text-white">Open Now</div>
-                  <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">7 AM – 11 PM Daily</div>
+                  <div className="text-lg font-bold text-white">{openNow ? "Open Now" : "Closed Now"}</div>
+                  <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">
+                    {openNow ? `${openTimeLabel} – ${closeTimeLabel} Daily` : `Opens ${openTimeLabel}`}
+                  </div>
                 </div>
               </motion.div>
               <motion.div
@@ -675,7 +841,7 @@ export default function Landing() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 4.5, duration: 0.4 }}
               >
-                <div className="text-lg font-bold text-white">12 min</div>
+                <div className="text-lg font-bold text-white">{prepMin} min</div>
                 <div className="text-[10px] text-white/35 uppercase tracking-wider mt-0.5">Avg. Prep Time</div>
               </motion.div>
               <motion.div
@@ -746,8 +912,11 @@ export default function Landing() {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
 
+      {/* ══════════ HOW DO YOU WANT TO ORDER? ══════════ */}
+      <HowToOrder />
+
       {/* ══════════ TODAY'S SPECIAL ══════════ */}
-      <TodaySpecial />
+      <TodaySpecial settings={settings} />
 
       {/* ══════════ DAYPART PICKS ══════════ */}
       <DaypartPicks />

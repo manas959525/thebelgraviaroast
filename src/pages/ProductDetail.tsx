@@ -82,6 +82,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | undefined>();
   const [selectedMilk, setSelectedMilk] = useState<string | undefined>();
+  const [selectedCustomizations, setSelectedCustomizations] = useState<Record<string, string>>({});
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const recordUpsell = useMutation(api.cafe.recordUpsellEvent);
 
@@ -131,6 +132,13 @@ export default function ProductDetail() {
   if (selectedSize === "Medium") extraPrice += 20;
   if (selectedSize === "Large") extraPrice += 40;
   if (selectedMilk === "Oat Milk" || selectedMilk === "Almond Milk") extraPrice += 30;
+  // Other single-choice groups (sweetness, temperature, etc.)
+  otherCustomizations.forEach((group) => {
+    const chosen = selectedCustomizations[group.name];
+    if (!chosen) return;
+    const opt = group.options.find((o) => o.name === chosen);
+    if (opt) extraPrice += opt.price;
+  });
   if (product.addOns) {
     selectedAddOns.forEach((name) => {
       const addOn = product.addOns!.find((a) => a.name === name);
@@ -145,10 +153,24 @@ export default function ProductDetail() {
     );
   };
 
+  const toggleCustomization = (group: string, option: string) => {
+    setSelectedCustomizations((prev) => {
+      const next = { ...prev };
+      if (next[group] === option) delete next[group];
+      else next[group] = option;
+      return next;
+    });
+  };
+
+  const chosenCustomizations = otherCustomizations
+    .map((g) => selectedCustomizations[g.name])
+    .filter((v): v is string => Boolean(v));
+
   const handleAdd = () => {
     addToCart(product, quantity, {
       selectedSize,
       selectedMilk,
+      customizations: chosenCustomizations.length ? chosenCustomizations : undefined,
       addOns: selectedAddOns.length ? selectedAddOns : undefined,
     });
     toast.success(`${product.name} × ${quantity} added to cart`);
@@ -289,15 +311,23 @@ export default function ProductDetail() {
                 <div key={custom.name} className="mb-5">
                   <h4 className="text-sm font-semibold text-foreground mb-2">{custom.name}</h4>
                   <div className="flex flex-wrap gap-2">
-                    {custom.options.map((opt) => (
-                      <button
-                        key={opt.name}
-                        className="px-3 py-2 rounded-xl text-sm border border-border text-foreground/70 hover:bg-muted"
-                      >
-                        {opt.name}
-                        {opt.price > 0 && <span className="text-xs ml-1">+₹{opt.price}</span>}
-                      </button>
-                    ))}
+                    {custom.options.map((opt) => {
+                      const active = selectedCustomizations[custom.name] === opt.name;
+                      return (
+                        <button
+                          key={opt.name}
+                          onClick={() => toggleCustomization(custom.name, opt.name)}
+                          className={`px-3 py-2 rounded-xl text-sm border transition-all ${
+                            active
+                              ? "border-gold bg-gold/10 text-gold font-semibold"
+                              : "border-border text-foreground/70 hover:bg-muted"
+                          }`}
+                        >
+                          {opt.name}
+                          {opt.price > 0 && <span className="text-xs ml-1">+₹{opt.price}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -388,6 +418,7 @@ export default function ProductDetail() {
                         addToCart(product, quantity, {
                           selectedSize,
                           selectedMilk,
+                          customizations: chosenCustomizations.length ? chosenCustomizations : undefined,
                           addOns: selectedAddOns.length ? selectedAddOns : undefined,
                         });
                         addToCart(combo.pair, 1);

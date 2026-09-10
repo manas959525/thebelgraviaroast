@@ -162,6 +162,7 @@ export default function MenuPage() {
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showSpicy, setShowSpicy] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"popular" | "price-asc" | "price-desc" | "rating">("popular");
   const [surprise, setSurprise] = useState<Product | null>(null);
@@ -180,6 +181,7 @@ export default function MenuPage() {
     if (showAvailableOnly) result = result.filter((p) => p.available);
     if (showBestSellers) result = result.filter((p) => p.badge === "bestseller" || p.bestSeller);
     if (showNew) result = result.filter((p) => p.badge === "new");
+    if (showSpicy) result = result.filter((p) => p.badge === "spicy" || p.tags.some((t) => t === "spicy"));
     if (maxPrice !== null) result = result.filter((p) => (p.discountPrice ?? p.price) <= maxPrice);
     if (search) {
       const q = search.toLowerCase();
@@ -200,7 +202,7 @@ export default function MenuPage() {
       );
     }
     return result;
-  }, [allProducts, selectedCategory, showVegOnly, showAvailableOnly, showBestSellers, showNew, maxPrice, search, sortBy]);
+  }, [allProducts, selectedCategory, showVegOnly, showAvailableOnly, showBestSellers, showNew, showSpicy, maxPrice, search, sortBy]);
 
   const handleCategoryClick = (slug: string | null) => {
     setSelectedCategory(slug);
@@ -443,6 +445,17 @@ export default function MenuPage() {
             >
               <Sparkles className="h-3.5 w-3.5" />
               New arrivals
+            </button>
+            <button
+              onClick={() => setShowSpicy(!showSpicy)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                showSpicy
+                  ? "bg-red-50 border-red-300 text-red-600"
+                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+              }`}
+            >
+              <Flame className="h-3.5 w-3.5" />
+              Spicy
             </button>
           </div>
         </div>

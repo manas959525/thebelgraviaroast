@@ -15,7 +15,16 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { items, total } = useCart();
   const settings = useQuery(api.cafe.listSettings);
-  const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | "delivery">("dine-in");
+  // Pre-select the mode chosen on the landing page ("How do you want to order?")
+  const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | "delivery">(() => {
+    try {
+      const saved = window.localStorage.getItem("tbr-order-mode");
+      if (saved === "dine-in" || saved === "takeaway" || saved === "delivery") return saved;
+    } catch {
+      /* storage blocked — fall back to dine-in */
+    }
+    return "dine-in";
+  });
   const [tableNumber, setTableNumber] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", address: "", notes: "" });
   const [couponInput, setCouponInput] = useState("");
