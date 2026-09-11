@@ -71,7 +71,7 @@ export default function Contact() {
           {/* Form */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
             <h2 className="text-xl font-bold text-foreground mb-6">Send a Message</h2>
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border/50 p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="glass-elevated rounded-2xl border-0 p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-foreground">Name</label>

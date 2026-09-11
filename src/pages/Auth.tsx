@@ -129,7 +129,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </span>
           </div>
 
-          <Card className="border shadow-md">
+          <Card className="glass-elevated liquid-sheen-slow border-0 shadow-md">
             {step === "signIn" ? (
               <>
                 <CardHeader className="text-center">

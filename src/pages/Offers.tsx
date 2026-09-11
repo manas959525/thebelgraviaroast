@@ -112,7 +112,7 @@ export default function OffersPage() {
                   </div>
                   <button
                     onClick={() => handleCopy(offer.code)}
-                    className="w-full flex items-center justify-center gap-2 bg-white/80 hover:bg-white border border-border/50 py-2.5 rounded-xl text-sm font-mono font-bold text-foreground transition-all"
+                    className="w-full flex items-center justify-center gap-2 glass-chip hover:bg-white border-0 py-2.5 rounded-xl text-sm font-mono font-bold text-foreground transition-all"
                   >
                     {copied === offer.code ? (
                       <>

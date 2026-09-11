@@ -36,7 +36,7 @@ export default function Dashboard() {
           </Button>
         </header>
 
-        <Card className="border-border/70 shadow-none">
+        <Card className="glass-elevated border-0 shadow-none">
           <CardHeader>
             <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <LayoutDashboard className="size-5" />

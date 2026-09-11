@@ -370,7 +370,7 @@ export default function MenuPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search dishes, ingredients..."
-                className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                className="glass-input w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground/70"
               />
             </div>
             <div className="flex gap-3">
@@ -404,8 +404,8 @@ export default function MenuPage() {
               onClick={() => setShowVegOnly(!showVegOnly)}
               className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                 showVegOnly
-                  ? "bg-green-50 border-green-300 text-green-700"
-                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+                  ? "bg-sage/15 border-sage/40 text-sage"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <Leaf className="h-3.5 w-3.5" />
@@ -416,7 +416,7 @@ export default function MenuPage() {
               className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                 showAvailableOnly
                   ? "bg-sage/15 border-sage/40 text-sage"
-                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
@@ -427,7 +427,7 @@ export default function MenuPage() {
               className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                 showBestSellers
                   ? "bg-dusty-rose/15 border-dusty-rose/40 text-dusty-rose"
-                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <Star className="h-3.5 w-3.5 fill-current" />
@@ -438,7 +438,7 @@ export default function MenuPage() {
               className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                 showNew
                   ? "bg-gold/15 border-gold/40 text-gold"
-                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -449,7 +449,7 @@ export default function MenuPage() {
               className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                 showSpicy
                   ? "bg-red-50 border-red-300 text-red-600"
-                  : "bg-white border-border text-foreground/70 hover:bg-muted"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <Flame className="h-3.5 w-3.5" />
@@ -463,7 +463,7 @@ export default function MenuPage() {
           <button
             onClick={() => handleCategoryClick(null)}
             className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              !selectedCategory ? "bg-gold text-white shadow-md shadow-gold/20" : "bg-white border border-border text-foreground/70 hover:bg-muted"
+              !selectedCategory ? "bg-gold text-white shadow-md shadow-gold/20 chip-sheen" : "glass-chip text-foreground/70"
             }`}
           >
             All
@@ -474,8 +474,8 @@ export default function MenuPage() {
               onClick={() => handleCategoryClick(cat.slug)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
                 selectedCategory === cat.slug
-                  ? "bg-gold text-white shadow-md shadow-gold/20"
-                  : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                  ? "bg-gold text-white shadow-md shadow-gold/20 chip-sheen"
+                  : "glass-chip text-foreground/70"
               }`}
             >
               <span>{cat.emoji}</span>

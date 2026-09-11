@@ -204,7 +204,7 @@ export default function PaymentPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-white rounded-2xl border border-border/50 p-6 sm:p-8 text-center mb-8"
+                className="glass-elevated rounded-2xl border-0 p-6 sm:p-8 text-center mb-8"
               >
                 {/* Brand header */}
                 <div className="mb-5">
@@ -327,7 +327,7 @@ export default function PaymentPage() {
             {/* ═══ CARD ═══ */}
             {method === "card" && (
               <motion.div key="card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="bg-white rounded-2xl border border-border/50 p-6 mb-8">
+                className="glass-elevated rounded-2xl border-0 p-6 mb-8">
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium">Card Number</label>
@@ -360,7 +360,7 @@ export default function PaymentPage() {
             {/* ═══ CASH ═══ */}
             {method === "cash" && (
               <motion.div key="cash" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="bg-white rounded-2xl border border-border/50 p-6 text-center mb-8">
+                className="glass-elevated rounded-2xl border-0 p-6 text-center mb-8">
                 <Building2 className="h-10 w-10 text-gold mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">Pay at the Counter</h3>
                 <p className="text-sm text-muted-foreground mb-6">Settle your bill at the register when you collect or finish your order.</p>

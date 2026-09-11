@@ -54,14 +54,14 @@ export default function CartPage() {
 
                 {/* Perfect-with suggestions */}
                 {suggestions.length > 0 && (
-                  <div className="bg-warm-gradient rounded-2xl border border-border/50 p-5">
+                  <div className="glass-elevated rounded-2xl border-0 p-5">
                     <div className="flex items-center gap-2 mb-4">
                       <Sparkles className="h-4 w-4 text-dusty-rose" />
                       <h3 className="text-sm font-bold text-foreground">Perfect with your {items[0]?.product.name}</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {suggestions.map((item) => (
-                        <div key={item.id} className="bg-white rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                        <div key={item.id} className="glass-chip rounded-xl p-3 flex items-center gap-3">
                           <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover shrink-0" />
                           <div className="flex-1 min-w-0">
                             <Link to={`/menu/${item.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
@@ -135,7 +135,7 @@ export default function CartPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20, height: 0 }}
-                        className="bg-white rounded-2xl border border-border/50 p-4 flex gap-4"
+                        className="glass-elevated liquid-sheen-slow rounded-2xl border-0 p-4 flex gap-4"
                       >
                         <img
                           src={item.product.image}
@@ -188,7 +188,7 @@ export default function CartPage() {
 
               {/* Summary */}
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-2xl border border-border/50 p-6 sticky top-24">
+                <div className="glass-elevated rounded-2xl border-0 p-6 sticky top-24">
                   <h3 className="font-semibold text-foreground mb-4">Order Summary</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">

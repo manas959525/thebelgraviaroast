@@ -124,7 +124,7 @@ export default function CheckoutPage() {
           <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               {/* Order Type */}
-              <div className="bg-white rounded-2xl border border-border/50 p-6">
+              <div className="glass-elevated rounded-2xl border-0 p-6">
                 <h3 className="font-semibold text-foreground mb-4">How would you like your order?</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {([
@@ -164,7 +164,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Contact */}
-              <div className="bg-white rounded-2xl border border-border/50 p-6">
+              <div className="glass-elevated rounded-2xl border-0 p-6">
                 <h3 className="font-semibold text-foreground mb-4">Contact Details</h3>
                 <div className="space-y-4">
                   <div>

@@ -136,7 +136,7 @@ export default function BuildYourDrink() {
                       onClick={() => i < step && setStep(i)}
                       disabled={i > step}
                       className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-                        active ? "bg-gold text-white shadow-md shadow-gold/20" : done ? "bg-sage text-white" : "bg-white border border-border text-muted-foreground"
+                        active ? "bg-gold text-white shadow-md shadow-gold/20" : done ? "bg-sage text-white" : "glass-chip text-muted-foreground"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5" />

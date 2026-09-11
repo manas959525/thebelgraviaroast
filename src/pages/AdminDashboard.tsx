@@ -157,7 +157,7 @@ function DashboardView() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="bg-white rounded-2xl border border-border/50 p-5">
+            <div key={stat.label} className="glass-elevated rounded-2xl border-0 p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${stat.color}`}>
                   <Icon className="h-4 w-4" />
@@ -191,7 +191,7 @@ function DashboardView() {
           {boardColumns.map((col) => {
             const colOrders = liveOrders.filter((o) => o.status === col.key);
             return (
-              <div key={col.key} className="bg-white rounded-2xl border border-border/50 p-4">
+              <div key={col.key} className="glass-elevated rounded-2xl border-0 p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`h-2 w-2 rounded-full ${col.dot}`} />
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{col.label}</span>
@@ -232,7 +232,7 @@ function DashboardView() {
       </div>
 
       {/* Service Requests */}
-      <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+      <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Bell className="h-4 w-4 text-dusty-rose" />
@@ -282,7 +282,7 @@ function DashboardView() {
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+      <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b">
           <h3 className="font-semibold text-foreground">Recent Orders</h3>
           <button className="text-xs text-gold font-medium hover:underline">View All</button>
@@ -418,7 +418,7 @@ function ProductsView() {
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((p) => (
-            <div key={p.id} className="bg-white rounded-2xl border border-border/50 overflow-hidden group">
+            <div key={p.id} className="glass-elevated rounded-2xl border-0 overflow-hidden group">
               <div className="relative h-40 overflow-hidden">
                 <img src={p.image} alt={p.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${!effective(p.id) ? "grayscale" : ""}`} />
                 {!effective(p.id) && (
@@ -442,7 +442,7 @@ function ProductsView() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+        <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -491,7 +491,7 @@ function CategoriesView() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((cat) => (
-          <div key={cat.id} className="bg-white rounded-2xl border border-border/50 p-5 flex items-center justify-between">
+          <div key={cat.id} className="glass-elevated rounded-2xl border-0 p-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-3xl">{cat.emoji}</div>
               <div>
@@ -547,7 +547,7 @@ function OrdersView() {
             key={f}
             onClick={() => setFilter(f)}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-              filter === f ? "bg-gold text-white" : "bg-white border border-border text-muted-foreground hover:bg-muted"
+              filter === f ? "bg-gold text-white" : "glass-chip text-muted-foreground"
             }`}
           >
             {f}
@@ -556,17 +556,17 @@ function OrdersView() {
       </div>
       <div className="space-y-3">
         {orders.length === 0 && filter === "all" ? (
-          <div className="bg-white rounded-xl border border-border/50 p-10 text-center">
+          <div className="glass-elevated rounded-xl border-0 p-10 text-center">
             <ShoppingBag className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">No orders yet — they'll show up here the moment a customer checks out.</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-xl border border-border/50 p-10 text-center">
+          <div className="glass-elevated rounded-xl border-0 p-10 text-center">
             <p className="text-sm text-muted-foreground">No {filter} orders.</p>
           </div>
         ) : (
           filtered.map((order) => (
-            <div key={order._id} className="bg-white rounded-xl border border-border/50 p-4 flex items-center gap-4">
+            <div key={order._id} className="glass-elevated rounded-xl border-0 p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1">
                   <span className="font-mono font-bold text-sm">{order.orderNumber ?? order._id}</span>
@@ -636,7 +636,7 @@ function PaymentsView() {
           { label: "Awaiting Verification", value: `${pendingCount}`, color: "text-amber-600" },
           { label: "Failed Payments", value: `${failedCount}`, color: "text-red-500" },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl border border-border/50 p-5">
+          <div key={s.label} className="glass-elevated rounded-2xl border-0 p-5">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
           </div>
@@ -644,12 +644,12 @@ function PaymentsView() {
       </div>
 
       {payments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border/50 p-6 text-center py-16">
+        <div className="glass-elevated rounded-2xl border-0 p-6 text-center py-16">
           <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Payment records will appear here once orders are placed. Customers are asked for their UTR so you can verify instantly.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+        <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -783,7 +783,7 @@ function TablesView() {
       </div>
 
       {adding && (
-        <div className="bg-white rounded-2xl border border-border/50 p-5 flex flex-wrap items-end gap-3">
+        <div className="glass-elevated rounded-2xl border-0 p-5 flex flex-wrap items-end gap-3">
           <div>
             <label className="text-xs font-medium block mb-1">Table Number</label>
             <input type="number" min={1} value={newTable.number} onChange={(e) => setNewTable({ ...newTable, number: e.target.value })} className="w-24 rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
@@ -834,7 +834,7 @@ function TablesView() {
 
       {/* Selected table detail */}
       {selectedTable && (
-        <div className="bg-white rounded-2xl border border-border/50 p-6">
+        <div className="glass-elevated rounded-2xl border-0 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
             <div>
               <h3 className="text-lg font-bold text-foreground">Table #{selectedTable.number}</h3>
@@ -940,7 +940,7 @@ function QRGeneratorView() {
       </div>
 
       {dbTables !== undefined && tableNumbers.length === 0 && (
-        <div className="bg-white rounded-2xl border border-border/50 p-10 text-center">
+        <div className="glass-elevated rounded-2xl border-0 p-10 text-center">
           <QrCode className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No tables yet — add tables in the Tables screen and they'll appear here.</p>
         </div>
@@ -950,14 +950,14 @@ function QRGeneratorView() {
         {tableNumbers.map((n) => {
           const url = TABLE_QR_URL(n);
           return (
-            <div key={n} className="bg-white rounded-2xl border border-border/50 p-6 text-center hover:shadow-md transition-all">
+            <div key={n} className="glass-elevated rounded-2xl border-0 p-6 text-center hover:shadow-md transition-all">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-foreground/70">Table #{n}</span>
                 <span className="flex items-center gap-1 text-[10px] font-bold text-sage bg-sage/10 px-2 py-0.5 rounded-full">
                   <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Active
                 </span>
               </div>
-              <div className="w-40 h-40 mx-auto bg-white rounded-xl border border-border/60 flex items-center justify-center mb-3 p-2">
+              <div className="w-40 h-40 mx-auto bg-white rounded-xl border-0 flex items-center justify-center mb-3 p-2">
                 <QRCodeSVG id={`table-qr-${n}`} value={url} size={140} level="M" />
               </div>
               <p className="text-[10px] text-muted-foreground mb-4 break-all">{url}</p>
@@ -1047,7 +1047,7 @@ function OffersView() {
       </div>
 
       {creating && (
-        <div className="bg-white rounded-2xl border border-border/50 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="glass-elevated rounded-2xl border-0 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-1">
             <label className="text-xs font-medium block mb-1">Code</label>
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="WELCOME10" className="w-full rounded-xl border border-border px-3 py-2 text-sm font-mono uppercase outline-none focus:border-gold" />
@@ -1091,7 +1091,7 @@ function OffersView() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-border/50 overflow-hidden">
+      <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">

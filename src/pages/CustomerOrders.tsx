@@ -107,7 +107,7 @@ export default function CustomerOrders() {
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-all ${
-                  tab === t ? "bg-gold text-white shadow-md shadow-gold/20" : "bg-white border border-border text-muted-foreground hover:bg-muted"
+                  tab === t ? "bg-gold text-white shadow-md shadow-gold/20 chip-sheen" : "glass-chip text-muted-foreground"
                 }`}
               >
                 {t}
@@ -144,7 +144,7 @@ export default function CustomerOrders() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
-                          className="bg-white rounded-2xl border border-border/50 p-5 hover:shadow-md transition-all"
+                          className="glass-elevated rounded-2xl border-0 p-5 hover:shadow-md transition-all"
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div>
@@ -201,7 +201,7 @@ export default function CustomerOrders() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {favouriteProducts.map((product) => (
-                      <div key={product.id} className="bg-white rounded-2xl border border-border/50 p-4 flex gap-4 items-center hover:shadow-md transition-all">
+                      <div key={product.id} className="glass-elevated rounded-2xl border-0 p-4 flex gap-4 items-center hover:shadow-md transition-all">
                         <img src={product.image} alt={product.name} className="h-16 w-16 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <Link to={`/menu/${product.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
@@ -262,7 +262,7 @@ export default function CustomerOrders() {
                     {rewardTiers.map((tier) => {
                       const unlocked = points >= tier.points;
                       return (
-                        <div key={tier.points} className={`bg-white rounded-2xl border p-6 text-center transition-all ${unlocked ? "border-gold/40 shadow-md" : "border-border/50 opacity-60"}`}>
+                        <div key={tier.points} className={`glass-elevated rounded-2xl border p-6 text-center transition-all ${unlocked ? "border-gold/40 shadow-md" : "opacity-60"}`}>
                           <div className="text-3xl mb-2">{tier.emoji}</div>
                           <div className="font-bold text-foreground mb-1">{tier.label}</div>
                           <div className="text-xs text-muted-foreground mb-3">{tier.points} points</div>

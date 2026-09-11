@@ -121,7 +121,7 @@ export default function About() {
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true }}
-                  className="bg-white rounded-2xl p-6 border border-border/50 shadow-sm"
+                  className="glass-elevated liquid-sheen-slow rounded-2xl p-6 border-0"
                 >
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/10 text-gold">
                     <Icon className="h-6 w-6" />
