@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight } from "lucide-react";
+import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/hooks/use-auth";
 
 const navLinks = [
   { to: "/", label: "Home", icon: Home },
   { to: "/menu", label: "Menu", icon: Coffee },
+  { to: "/orders", label: "Orders", icon: ClipboardList },
   { to: "/offers", label: "Offers", icon: Tag },
   { to: "/about", label: "About", icon: Info },
   { to: "/contact", label: "Contact", icon: Phone },
@@ -55,6 +56,9 @@ export default function Navbar() {
   };
 
   const isLanding = location.pathname === "/";
+  // Over the dark cinematic hero the transparent bar needs light text;
+  // everywhere else (or once scrolled) the glass bar is light with dark text.
+  const onDark = isLanding && !scrolled;
 
   return (
     <>
@@ -66,7 +70,7 @@ export default function Navbar() {
           scrolled || !isLanding
             ? "glass-liquid shadow-lg shadow-black/5 border-x-0 border-t-0"
             : "bg-transparent"
-        }`}
+        } ${onDark ? "text-white" : ""}`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between lg:h-20">
@@ -76,9 +80,9 @@ export default function Navbar() {
                 <Coffee className="h-5 w-5" />
               </div>
               <div className="hidden sm:block leading-tight">
-                <div className="text-[10px] font-medium text-muted-foreground tracking-[0.2em] uppercase -mb-0.5">The</div>
-                <span className="text-base font-bold tracking-tight text-foreground">BELGRAVIA</span>
-                <span className="text-base font-light text-dusty-rose ml-1">Roast</span>
+                <div className={`text-[10px] font-medium tracking-[0.2em] uppercase -mb-0.5 ${onDark ? "text-white/50" : "text-muted-foreground"}`}>The</div>
+                <span className={`text-base font-bold tracking-tight ${onDark ? "text-white" : "text-foreground"}`}>BELGRAVIA</span>
+                <span className={`text-base font-light ml-1 ${onDark ? "text-champagne" : "text-dusty-rose"}`}>Roast</span>
               </div>
             </Link>
 
@@ -92,8 +96,10 @@ export default function Navbar() {
                     to={link.to}
                     className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                       active
-                        ? "text-dusty-rose"
-                        : "text-foreground/70 hover:text-foreground hover:bg-foreground/5"
+                        ? onDark ? "text-white" : "text-dusty-rose"
+                        : onDark
+                          ? "text-white/70 hover:text-white hover:bg-white/10"
+                          : "text-foreground/70 hover:text-foreground hover:bg-foreground/5"
                     }`}
                   >
                     {link.label}
@@ -112,24 +118,24 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
+                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
                 aria-label="Search"
               >
-                <Search className="h-4.5 w-4.5 text-foreground/70" />
+                <Search className={`h-4.5 w-4.5 ${onDark ? "text-white/80" : "text-foreground/70"}`} />
               </button>
 
               <Link
                 to={isAuthenticated ? "/dashboard" : "/auth"}
-                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
+                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
               >
-                <User className="h-4.5 w-4.5 text-foreground/70" />
+                <User className={`h-4.5 w-4.5 ${onDark ? "text-white/80" : "text-foreground/70"}`} />
               </Link>
 
               <Link
                 to="/cart"
-                className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
               >
-                <ShoppingBag className="h-4.5 w-4.5 text-foreground/70" />
+                <ShoppingBag className={`h-4.5 w-4.5 ${onDark ? "text-white/80" : "text-foreground/70"}`} />
                 {count > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
@@ -150,10 +156,14 @@ export default function Navbar() {
 
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg hover:bg-foreground/5"
+                className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
                 aria-label="Menu"
               >
-                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {mobileOpen ? (
+                  <X className={`h-5 w-5 ${onDark ? "text-white" : "text-foreground"}`} />
+                ) : (
+                  <Menu className={`h-5 w-5 ${onDark ? "text-white" : "text-foreground"}`} />
+                )}
               </button>
             </div>
           </div>
