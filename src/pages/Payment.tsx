@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink, Receipt } from "lucide-react";
@@ -13,6 +13,42 @@ type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed"
 
 const DEFAULT_UPI_ID = "7728059988@ptyes";
 const DEFAULT_CAFÉ_NAME = "THE BELGRAVIA ROAST";
+
+interface CheckoutState {
+  grandTotal?: number;
+  subtotal?: number;
+  tax?: number;
+  discount?: number;
+  couponCode?: string;
+  orderType?: string;
+  tableNumber?: string;
+  name?: string;
+  phone?: string;
+  notes?: string;
+}
+
+/**
+ * Checkout details are passed from Checkout via router state, which is lost on
+ * refresh. Persisting them in sessionStorage lets the Payment page (and the
+ * receipt) survive a reload instead of showing ₹0.
+ */
+function readCheckoutState(locationState: unknown): CheckoutState {
+  if (locationState && typeof locationState === "object" && "grandTotal" in (locationState as object)) {
+    try {
+      window.sessionStorage.setItem("tbr-checkout", JSON.stringify(locationState));
+    } catch {
+      /* storage blocked — state still lives in memory for this visit */
+    }
+    return locationState as CheckoutState;
+  }
+  try {
+    const raw = window.sessionStorage.getItem("tbr-checkout");
+    if (raw) return JSON.parse(raw) as CheckoutState;
+  } catch {
+    /* fall through */
+  }
+  return {};
+}
 
 function generateOrderId(): string {
   const date = new Date();
@@ -41,18 +77,7 @@ export default function PaymentPage() {
   const upiId = settings?.upiId?.trim() || DEFAULT_UPI_ID;
   const cafeName = settings?.cafeName?.trim() || DEFAULT_CAFÉ_NAME;
 
-  const state = location.state as {
-    grandTotal?: number;
-    subtotal?: number;
-    tax?: number;
-    discount?: number;
-    couponCode?: string;
-    orderType?: string;
-    tableNumber?: string;
-    name?: string;
-    phone?: string;
-    notes?: string;
-  } | null;
+  const state = readCheckoutState(location.state);
 
   const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
@@ -60,6 +85,15 @@ export default function PaymentPage() {
   const [utr, setUtr] = useState("");
   const [orderId] = useState(() => generateOrderId());
   const total = state?.grandTotal || 0;
+
+  // No checkout data (e.g. direct visit after the receipt was cleared) — back to menu.
+  useEffect(() => {
+    if (total <= 0) {
+      const t = setTimeout(() => navigate("/menu", { replace: true }), 2000);
+      toast.warning("Nothing to pay for — returning to the menu.");
+      return () => clearTimeout(t);
+    }
+  }, [total, navigate]);
 
   const handleInitiatePayment = () => {
     setPaymentStatus("initiated");
@@ -100,6 +134,13 @@ export default function PaymentPage() {
       toast.warning("Couldn't reach the café database — your receipt is saved on this device.");
     }
     void cafeName;
+
+    // Clear stored checkout details now that the order is placed.
+    try {
+      window.sessionStorage.removeItem("tbr-checkout");
+    } catch {
+      /* ignore */
+    }
 
     clearCart();
     navigate("/order-confirmation", {

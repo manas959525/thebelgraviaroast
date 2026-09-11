@@ -33,10 +33,32 @@ interface ConfirmationState {
   items?: OrderLineItem[];
 }
 
+/**
+ * Router state is lost on refresh, which would blank the receipt. The latest
+ * receipt is mirrored into sessionStorage so a reload restores it exactly.
+ */
+function readReceiptState(locationState: ConfirmationState | null): ConfirmationState | null {
+  if (locationState && typeof locationState === "object" && locationState.orderId) {
+    try {
+      window.sessionStorage.setItem("tbr-receipt", JSON.stringify(locationState));
+    } catch {
+      /* storage blocked — receipt still shows for this visit */
+    }
+    return locationState;
+  }
+  try {
+    const raw = window.sessionStorage.getItem("tbr-receipt");
+    if (raw) return JSON.parse(raw) as ConfirmationState;
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
+
 export default function OrderConfirmation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const state = location.state as ConfirmationState | null;
+  const state = readReceiptState(location.state as ConfirmationState | null);
   const submitReview = useMutation(api.cafe.submitReview);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");

@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, type Product } from "@/data/menu";
 import { useProductsWithFlags } from "@/lib/use-live-catalog";
-import { addToCart } from "@/lib/cart";
+import { addToCart, useCart } from "@/lib/cart";
 import { addServiceRequest, type ServiceRequest } from "@/lib/orders";
 import { toast } from "sonner";
 
@@ -28,8 +28,10 @@ export default function TableOrdering() {
   const [step, setStep] = useState<"scan" | "menu" | "cart">(qrTable ? "menu" : "scan");
   const [tableNum, setTableNum] = useState(qrTable);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState<{ product: Product; qty: number }[]>([]);
   const { allProducts } = useProductsWithFlags();
+  // The global cart is the single source of truth — the same items flow into
+  // checkout and the navbar badge, and survive a refresh.
+  const { items: cartItems } = useCart();
 
   const filtered = selectedCat
     ? allProducts.filter((p) => p.category === selectedCat)
@@ -50,17 +52,12 @@ export default function TableOrdering() {
   };
 
   const handleAdd = (product: Product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) return prev.map((i) => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { product, qty: 1 }];
-    });
     addToCart(product, 1);
     toast.success(`${product.name} added`);
   };
 
-  const totalItems = cartItems.reduce((sum, i) => sum + i.qty, 0);
-  const totalPrice = cartItems.reduce((sum, i) => sum + (i.product.discountPrice ?? i.product.price) * i.qty, 0);
+  const totalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const totalPrice = cartItems.reduce((sum, i) => sum + (i.product.discountPrice ?? i.product.price) * i.quantity, 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -258,14 +255,14 @@ export default function TableOrdering() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-2xl font-bold text-foreground mb-6">Your Order — Table #{tableNum}</h1>
               <div className="space-y-3 mb-6">
-                {cartItems.map((item) => (
-                  <div key={item.product.id} className="flex items-center gap-4 bg-white rounded-xl border border-border/50 p-3">
+                {cartItems.map((item, idx) => (
+                  <div key={`${item.product.id}-${idx}`} className="flex items-center gap-4 bg-white rounded-xl border border-border/50 p-3">
                     <img src={item.product.image} alt={item.product.name} className="h-14 w-14 rounded-lg object-cover" />
                     <div className="flex-1">
                       <h3 className="font-medium text-sm">{item.product.name}</h3>
-                      <p className="text-xs text-muted-foreground">Qty: {item.qty}</p>
+                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                     </div>
-                    <span className="font-bold text-sm">₹{(item.product.discountPrice ?? item.product.price) * item.qty}</span>
+                    <span className="font-bold text-sm">₹{(item.product.discountPrice ?? item.product.price) * item.quantity}</span>
                   </div>
                 ))}
               </div>

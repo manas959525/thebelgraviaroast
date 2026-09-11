@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { addToCart } from "@/lib/cart";
 import { products } from "@/data/menu";
-import { getOrderById, type OrderStatus } from "@/lib/orders";
+import { getOrderById, getLastOrder, type OrderStatus } from "@/lib/orders";
 import { toast } from "sonner";
 
 const DB_STATUS_INDEX: Record<string, number> = {
@@ -38,7 +38,9 @@ export default function TrackOrder() {
     total?: number;
   } | null;
 
-  const storedOrder = state?.orderId ? getOrderById(state.orderId) : null;
+  // Router state is lost on refresh — fall back to the most recent order so
+  // the tracker still works after a reload (or from the Orders page link).
+  const storedOrder = state?.orderId ? getOrderById(state.orderId) : getLastOrder();
   const orderId = state?.orderId || storedOrder?.id || "TBR-DEMO-001";
   const items = state?.items || storedOrder?.items || [];
   const tableNumber = state?.tableNumber || storedOrder?.tableNumber;

@@ -1,4 +1,5 @@
-import { Product } from "@/data/menu";
+import { useSyncExternalStore } from "react";
+import type { Product } from "@/data/menu";
 
 export interface CartItem {
   product: Product;
@@ -10,25 +11,66 @@ export interface CartItem {
   specialInstructions?: string;
 }
 
-// Simple event-based cart (no external state lib needed)
+/**
+ * Event-based cart store, persisted to localStorage.
+ * - Survives page refreshes (write-through on every mutation).
+ * - Every mutation replaces `_items` with a NEW array so
+ *   `useSyncExternalStore` sees a fresh snapshot and re-renders
+ *   (a mutated-in-place array would silently never update).
+ */
+const CART_KEY = "tbr-cart-v1";
+
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
-let _items: CartItem[] = [];
+
+function readStored(): CartItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CART_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    // Guard against corrupted/partial storage entries.
+    return (parsed as CartItem[]).filter(
+      (i) => i && typeof i === "object" && i.product && typeof i.product.id === "string" && typeof i.quantity === "number",
+    );
+  } catch {
+    return [];
+  }
+}
+
+let _items: CartItem[] = readStored();
+
+function persist() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CART_KEY, JSON.stringify(_items));
+  } catch {
+    /* storage full or blocked — in-memory state still works for this session */
+  }
+}
 
 function notify() {
+  persist();
   listeners.forEach((l) => l());
 }
 
 export function subscribeCart(listener: Listener) {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function getCartItems() {
   return _items;
 }
 
-export function addToCart(product: Product, quantity = 1, opts?: Partial<Pick<CartItem, "selectedSize" | "selectedMilk" | "customizations" | "addOns" | "specialInstructions">>) {
+export function addToCart(
+  product: Product,
+  quantity = 1,
+  opts?: Partial<Pick<CartItem, "selectedSize" | "selectedMilk" | "customizations" | "addOns" | "specialInstructions">>,
+) {
   const existing = _items.find(
     (i) =>
       i.product.id === product.id &&
@@ -37,25 +79,22 @@ export function addToCart(product: Product, quantity = 1, opts?: Partial<Pick<Ca
       JSON.stringify(i.customizations) === JSON.stringify(opts?.customizations) &&
       JSON.stringify(i.addOns) === JSON.stringify(opts?.addOns),
   );
-  if (existing) {
-    existing.quantity += quantity;
-  } else {
-    _items.push({ product, quantity, ...opts });
-  }
+  _items = existing
+    ? _items.map((i) => (i === existing ? { ...i, quantity: i.quantity + quantity } : i))
+    : [..._items, { product, quantity, ...opts }];
   notify();
 }
 
 export function updateQuantity(index: number, quantity: number) {
-  if (quantity <= 0) {
-    _items.splice(index, 1);
-  } else {
-    _items[index].quantity = quantity;
-  }
+  _items =
+    quantity <= 0
+      ? _items.filter((_, i) => i !== index)
+      : _items.map((i, idx) => (idx === index ? { ...i, quantity } : i));
   notify();
 }
 
 export function removeFromCart(index: number) {
-  _items.splice(index, 1);
+  _items = _items.filter((_, i) => i !== index);
   notify();
 }
 
@@ -83,7 +122,7 @@ export function getCartTotal() {
       const addOn = item.product.addOns?.find((a) => a.name === name);
       if (addOn) extra += addOn.price;
     });
-    return (sum + basePrice + extra) * item.quantity;
+    return sum + (basePrice + extra) * item.quantity;
   }, 0);
 }
 
@@ -92,8 +131,6 @@ export function getCartCount() {
 }
 
 // React hook
-import { useSyncExternalStore } from "react";
-
 export function useCart() {
   const items = useSyncExternalStore(subscribeCart, getCartItems);
   const total = getCartTotal();
