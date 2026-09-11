@@ -189,6 +189,15 @@
     background: linear-gradient(135deg, #1B2A3D 0%, #243647 50%, #2A3D52 100%);
   }
 
+  /* Hide scrollbars on horizontal chip rails (keeps scrolling functional) */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Glass effects */
   .glass {
     backdrop-filter: blur(20px) saturate(180%);

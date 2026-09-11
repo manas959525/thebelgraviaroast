@@ -72,7 +72,8 @@ export function getOrders() {
 }
 
 export function getLastOrder() {
-  return _orders.length ? _orders[_orders.length - 1] : null;
+  // Orders are stored newest-first (saveOrder prepends).
+  return _orders.length ? _orders[0] : null;
 }
 
 export function getOrderById(id: string) {

@@ -88,7 +88,27 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+// Fail soft if the Convex URL is missing: render a friendly screen instead of
+// crashing inside the client constructor before any error boundary mounts.
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string | undefined;
+const convex = CONVEX_URL
+  ? new ConvexReactClient(CONVEX_URL)
+  : null;
+
+if (!convex) {
+  // Surface a readable error page when the backend URL isn't configured.
+  createRoot(document.getElementById("root")!).render(
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+      <div className="max-w-md text-center">
+        <div className="text-5xl mb-4">☕</div>
+        <p className="text-lg font-semibold">The café is opening shortly.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The backend connection isn't configured yet. Please add the VITE_CONVEX_URL key and reload this page.
+        </p>
+      </div>
+    </div>,
+  );
+} else {
 
 // PWA: register the service worker (network-first — safe with the dev preview).
 if ("serviceWorker" in navigator) {
@@ -174,4 +194,5 @@ createRoot(document.getElementById("root")!).render(
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>,
-);
+  );
+}
