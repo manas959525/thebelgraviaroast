@@ -62,10 +62,8 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
     >
       <Link
         to={`/menu/${product.slug}`}
-        className={`group flex gap-4 bg-white rounded-2xl p-4 border transition-all duration-300 ${
-          product.available
-            ? "border-border/50 shadow-sm hover:shadow-lg"
-            : "border-border/40 opacity-70"
+        className={`group flex gap-4 glass-elevated rounded-2xl p-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${
+          product.available ? "" : "opacity-70"
         }`}
       >
         <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-xl overflow-hidden shrink-0">
@@ -293,8 +291,8 @@ export default function MenuPage() {
                 onClick={() => handleCategoryClick(selectedCategory === chip.cat ? null : chip.cat)}
                 className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   selectedCategory === chip.cat
-                    ? "bg-gold text-white shadow-md shadow-gold/20"
-                    : "bg-white border border-border text-foreground/70 hover:bg-muted"
+                    ? "bg-gold text-white shadow-md shadow-gold/20 chip-sheen"
+                    : "glass-chip text-foreground/70"
                 }`}
               >
                 <span className="text-base">{chip.emoji}</span>
@@ -328,7 +326,7 @@ export default function MenuPage() {
                 exit={{ opacity: 0, y: -8, height: 0 }}
                 className="overflow-hidden mt-3"
               >
-                <div className="bg-white rounded-2xl border border-dusty-rose/30 shadow-md overflow-hidden">
+                <div className="glass-elevated liquid-sheen-slow rounded-2xl border border-dusty-rose/30 overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <img src={surprise.image} alt={surprise.name} className="sm:w-32 h-28 sm:h-auto object-cover" />
                     <div className="p-4 flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -379,7 +377,7 @@ export default function MenuPage() {
               <select
                 value={maxPrice === null ? "any" : String(maxPrice)}
                 onChange={(e) => setMaxPrice(e.target.value === "any" ? null : Number(e.target.value))}
-                className="rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-gold"
+                className="glass-input rounded-xl px-3 py-2.5 text-sm outline-none"
                 aria-label="Price range"
               >
                 <option value="any">Any price</option>
@@ -391,7 +389,7 @@ export default function MenuPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-gold"
+                className="glass-input rounded-xl px-3 py-2.5 text-sm outline-none"
                 aria-label="Sort by"
               >
                 <option value="popular">Most popular</option>
