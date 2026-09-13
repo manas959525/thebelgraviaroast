@@ -119,7 +119,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!("identifier" in step)) return;
+    if (typeof step !== "object") return;
     setIsLoading(true);
     setError(null);
     try {
@@ -152,8 +152,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
-  const identifier = "identifier" in step ? step.identifier : "";
-  const via = "identifier" in step ? step.via : "phone";
+  const identifier = typeof step === "object" ? step.identifier : "";
+  const via = typeof step === "object" ? step.via : "phone";
 
   return (
     <div className="min-h-screen flex bg-background">

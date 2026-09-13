@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { AssistantView } from "./admin/AssistantView";
 import {
   LayoutDashboard, Coffee, ShoppingBag, Tag, BarChart3,
   Settings, TrendingUp, DollarSign, Package,
@@ -7,12 +8,12 @@ import {
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
   Power, PowerOff, ChefHat, ExternalLink, Bot,
-} from "lucide-react"; from "lucide-react";
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
 import { categories, products as staticProducts } from "@/data/menu";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
 import { timeAgo, ORDER_STATUS_ORDER } from "@/lib/orders";
@@ -1391,6 +1392,7 @@ export default function AdminDashboardPage() {
       case "analytics": return <AnalyticsView />;
       case "assistant": return <AssistantView />;
       case "settings": return <SettingsView />;
+      case "menu": return <ProductsView />;
       default: return <DashboardView />;
     }
   };
