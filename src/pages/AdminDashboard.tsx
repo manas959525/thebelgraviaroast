@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   LayoutDashboard, Coffee, ShoppingBag, Tag, BarChart3,
   Settings, TrendingUp, DollarSign, Package,
@@ -6,8 +6,8 @@ import {
   QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
-  Power, PowerOff, ChefHat, ExternalLink,
-} from "lucide-react";
+  Power, PowerOff, ChefHat, ExternalLink, Bot,
+} from "lucide-react"; from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
@@ -28,6 +28,7 @@ type AdminSection =
   | "payments"
   | "offers"
   | "analytics"
+  | "assistant"
   | "content"
   | "settings"
   | "qr-generator";
@@ -44,6 +45,7 @@ const sidebarItems: { id: AdminSection; label: string; icon: typeof LayoutDashbo
   { id: "offers", label: "Offers & Coupons", icon: Tag },
   { id: "content", label: "Customer Content", icon: Star },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "assistant", label: "AI Assistant", icon: Bot },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -1387,6 +1389,7 @@ export default function AdminDashboardPage() {
       case "offers": return <OffersView />;
       case "content": return <ContentView />;
       case "analytics": return <AnalyticsView />;
+      case "assistant": return <AssistantView />;
       case "settings": return <SettingsView />;
       default: return <DashboardView />;
     }

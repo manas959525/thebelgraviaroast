@@ -28,7 +28,7 @@ const schema = defineSchema(
       role: v.optional(roleValidator),
       phone: v.optional(v.string()),
       address: v.optional(v.string()),
-    }).index("email", ["email"]),
+    }).index("email", ["email"]).index("phone", ["phone"]),
 
     categories: defineTable({
       name: v.string(),
@@ -198,6 +198,13 @@ const schema = defineSchema(
       rating: v.optional(v.number()),
       approved: v.boolean(),
     }).index("by_user", ["userId"]),
+
+    // Anonymous chatbot usage analytics (aggregated client-side, no PII).
+    chatEvents: defineTable({
+      kind: v.string(),
+      payload: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("by_kind", ["kind"]).index("by_createdAt", ["createdAt"]),
 
     // Smart-upsell events: which combo was shown / accepted and its value.
     upsellEvents: defineTable({
