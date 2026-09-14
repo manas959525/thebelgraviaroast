@@ -39,9 +39,9 @@ export default function CustomerOrders() {
   const { allProducts } = useProductsWithFlags();
   const { isAuthenticated, user } = useAuth();
 
-  // Signed-in guests see the full order history from the café database;
-  // guests fall back to orders placed on this device.
-  const dbOrders = useQuery(api.cafe.listOrders, isAuthenticated ? {} : "skip");
+  // Signed-in guests see their own order history from the café database
+  // (server-scoped); guests fall back to orders placed on this device.
+  const dbOrders = useQuery(api.cafe.listMyOrders, isAuthenticated ? {} : "skip");
   const orders = useMemo(() => {
     if (!isAuthenticated) return localOrders;
     const mine = dbOrders ?? [];

@@ -6,18 +6,27 @@ import Footer from "@/components/Footer";
 import { useCart, updateQuantity, removeFromCart, clearCart, addToCart } from "@/lib/cart";
 import { getComplements } from "@/lib/cafe";
 import { getComboFor } from "@/lib/combos";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { toast } from "sonner";
 
 export default function CartPage() {
   const { items, total, count } = useCart();
   const suggestions = items.length ? getComplements(items[0].product, 2) : [];
   const recordUpsell = useMutation(api.cafe.recordUpsellEvent);
+  const settings = useQuery(api.cafe.listSettings);
+  const { allProducts } = useProductsWithFlags();
 
   const combo = items.length > 0 ? getComboFor(items[0].product) : null;
   const comboMissingPair =
     combo && !items.some((i) => i.product.id === combo.pair.id);
+
+  // Tax mirrors the café's configured rate (same source the server uses).
+  const taxRatePct = Number(settings?.taxRate ?? "5") || 5;
+  const tax = Math.round((total * taxRatePct) / 100);
+  // Live availability: warn if anything in the cart has been marked sold out.
+  const soldOutInCart = items.filter((i) => !allProducts.find((p) => p.id === i.product.id)?.available);
 
   return (
     <div className="min-h-screen bg-background">
@@ -196,14 +205,21 @@ export default function CartPage() {
                       <span className="font-medium">₹{total}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tax (5%)</span>
-                      <span className="font-medium">₹{Math.round(total * 0.05)}</span>
+                      <span className="text-muted-foreground">Tax ({taxRatePct}%)</span>
+                      <span className="font-medium">₹{tax}</span>
                     </div>
                     <div className="border-t pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total</span>
-                      <span className="font-bold text-lg text-foreground">₹{total + Math.round(total * 0.05)}</span>
+                      <span className="font-bold text-lg text-foreground">₹{total + tax}</span>
                     </div>
                   </div>
+                  {soldOutInCart.length > 0 && (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                      <p className="text-[11px] text-amber-700">
+                        {soldOutInCart.map((i) => i.product.name).join(", ")} {soldOutInCart.length === 1 ? "has" : "have"} sold out — remove {soldOutInCart.length === 1 ? "it" : "them"} before checkout.
+                      </p>
+                    </div>
+                  )}
                   <Link
                     to="/checkout"
                     className="mt-6 w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"

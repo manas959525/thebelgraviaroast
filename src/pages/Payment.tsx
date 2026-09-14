@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, CreditCard, Smartphone, Building2, AlertTriangle, ExternalLink, Receipt } from "lucide-react";
@@ -9,7 +9,7 @@ import { UpiQrCode } from "@/components/UpiQrCode";
 import { clearCart, getCartItems } from "@/lib/cart";
 import { toast } from "sonner";
 
-type PaymentStatus = "idle" | "initiated" | "verification_pending" | "completed" | "failed";
+type PaymentStatus = "idle" | "initiated" | "verification_pending";
 
 const DEFAULT_UPI_ID = "7728059988@ptyes";
 const DEFAULT_CAFÉ_NAME = "THE BELGRAVIA ROAST";
@@ -50,10 +50,12 @@ function readCheckoutState(locationState: unknown): CheckoutState {
   return {};
 }
 
+/** Crypto-random order id: unpredictable (not enumerable) and collision-safe. */
 function generateOrderId(): string {
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  const rand = Array.from(bytes, (b) => (b % 36).toString(36)).join("").toUpperCase();
   return `TBR-${dateStr}-${rand}`;
 }
 
@@ -83,8 +85,13 @@ export default function PaymentPage() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
   const [qrImageFailed, setQrImageFailed] = useState(false);
   const [utr, setUtr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  // Stable per visit: a page refresh regenerates it, which keeps a retried
+  // submission from colliding with an order that was already recorded.
   const [orderId] = useState(() => generateOrderId());
   const total = state?.grandTotal || 0;
+  const submittingRef = useRef(false);
+  submittingRef.current = submitting;
 
   // No checkout data (e.g. direct visit after the receipt was cleared) — back to menu.
   useEffect(() => {
@@ -95,15 +102,38 @@ export default function PaymentPage() {
     }
   }, [total, navigate]);
 
+  // Browser back / tab close mid-payment: keep sessionStorage checkout data
+  // (so Back → forward still works); it is cleared only after a recorded order.
+  useEffect(() => {
+    const onBeforeUnload = () => {};
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   const handleInitiatePayment = () => {
     setPaymentStatus("initiated");
     const deepLink = generateUpiDeepLink(total, orderId, upiId, cafeName);
     window.open(deepLink, "_blank");
   };
 
-  /** Persist the order + payment to Convex, then hand off to the receipt page. */
-  const submitOrder = async (paymentMethod: string, paymentStatus: "paid" | "pending", extraState: Record<string, string | undefined> = {}) => {
+  /**
+   * Record the order + payment on the server. The server re-prices every line
+   * from its own catalog — the client total is only used as a sanity check.
+   * Idempotent per orderId: a network retry can't create a duplicate order.
+   */
+  const submitOrder = async (paymentMethod: string, paymentStatus: "pending" | "paid" = "pending") => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setPaymentStatus("verification_pending");
+
     const cartItems = getCartItems();
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty — nothing to order.");
+      navigate("/menu", { replace: true });
+      return;
+    }
+
     const orderData = {
       orderNumber: orderId,
       items: cartItems.map((i) => ({
@@ -115,8 +145,9 @@ export default function PaymentPage() {
         addOns: i.addOns,
       })),
       subtotal: state?.subtotal ?? total,
-      tax: state?.tax ?? Math.round(total * 0.05),
+      tax: state?.tax ?? 0,
       discount: state?.discount ?? 0,
+      couponCode: state?.couponCode,
       total,
       orderType: (state?.orderType as "dine-in" | "takeaway" | "delivery") || "dine-in",
       tableNumber: state?.tableNumber,
@@ -127,13 +158,20 @@ export default function PaymentPage() {
       utr: utr.trim() || undefined,
     };
 
-    let db: { orderId: string; paymentId: string; receiptId: string } | null = null;
+    let db: { orderId: string; paymentId?: string; receiptId: string } | null = null;
     try {
       db = await placeOrder(orderData);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Server-side re-pricing / stock mismatches send the customer back to review.
+      if (msg.includes("total changed") || msg.includes("no longer on the menu") || msg.includes("cart is empty")) {
+        toast.error(msg);
+        navigate("/cart", { replace: true });
+        return;
+      }
+      // Network hiccup: the receipt still works locally; staff verify manually.
       toast.warning("Couldn't reach the café database — your receipt is saved on this device.");
     }
-    void cafeName;
 
     // Clear stored checkout details now that the order is placed.
     try {
@@ -148,7 +186,7 @@ export default function PaymentPage() {
         orderId,
         total,
         subtotal: state?.subtotal ?? total,
-        tax: state?.tax ?? Math.round(total * 0.05),
+        tax: state?.tax ?? 0,
         discount: state?.discount ?? 0,
         couponCode: state?.couponCode,
         orderType: state?.orderType || "dine-in",
@@ -166,31 +204,23 @@ export default function PaymentPage() {
           qty: i.quantity,
           price: i.product.discountPrice ?? i.product.price,
         })),
-        ...extraState,
       },
     });
   };
 
   const handlePaymentCompleted = () => {
-    setPaymentStatus("verification_pending");
-    setTimeout(() => {
-      setPaymentStatus("completed");
-      void submitOrder("upi", "pending");
-    }, 900);
+    void submitOrder("upi");
   };
 
   const handleCashOrder = () => {
-    setPaymentStatus("initiated");
-    void submitOrder("cash", "pending");
+    void submitOrder("cash");
   };
 
   const handleCardOrder = () => {
-    setPaymentStatus("verification_pending");
-    setTimeout(() => {
-      setPaymentStatus("completed");
-      void submitOrder("card", "pending");
-    }, 900);
+    void submitOrder("card");
   };
+
+  const busy = submitting;
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,17 +241,17 @@ export default function PaymentPage() {
           <div className="space-y-3 mb-8">
             {([
               { value: "upi" as const, label: "UPI / Scan & Pay", icon: Smartphone, desc: "Google Pay, PhonePe, Paytm, BHIM" },
-              { value: "card" as const, label: "Credit / Debit Card", icon: CreditCard, desc: "Visa, Mastercard, RuPay" },
+              { value: "card" as const, label: "Card at Counter", icon: CreditCard, desc: "Pay by card when you collect" },
               { value: "cash" as const, label: "Pay at Counter", icon: Building2, desc: "Cash or card at the café" },
             ]).map(({ value, label, icon: Icon, desc }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setMethod(value)}
-                disabled={paymentStatus !== "idle"}
+                disabled={busy}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
                   method === value ? "border-gold bg-gold/5" : "border-border hover:bg-muted/50"
-                } ${paymentStatus !== "idle" ? "opacity-60" : ""}`}
+                } ${busy ? "opacity-60" : ""}`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
                   method === value ? "bg-gold text-white" : "bg-muted text-muted-foreground"
@@ -237,7 +267,7 @@ export default function PaymentPage() {
             ))}
           </div>
 
-          {/* ═══ UPI — Section 8 ═══ */}
+          {/* ═══ UPI — the café's real QR image with a generated fallback ═══ */}
           <AnimatePresence mode="wait">
             {method === "upi" && (
               <motion.div
@@ -305,7 +335,7 @@ export default function PaymentPage() {
                 </AnimatePresence>
 
                 {/* Actions */}
-                {paymentStatus === "idle" && (
+                {paymentStatus === "idle" && !busy && (
                   <div className="space-y-3">
                     <button
                       onClick={handleInitiatePayment}
@@ -338,23 +368,25 @@ export default function PaymentPage() {
                     </div>
                     <button
                       onClick={handlePaymentCompleted}
-                      className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
+                      disabled={busy}
+                      className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-60"
                     >
                       <Receipt className="h-4 w-4" />
-                      Confirm Payment & Get Receipt
+                      {busy ? "Recording your order..." : "Confirm Payment & Get Receipt"}
                     </button>
                     <button
                       onClick={() => setPaymentStatus("idle")}
-                      className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      disabled={busy}
+                      className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                     >
                       Go back
                     </button>
                   </div>
                 )}
-                {paymentStatus === "verification_pending" && (
+                {paymentStatus === "verification_pending" && busy && (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-3">
                     <div className="h-4 w-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
-                    Verifying & creating your receipt...
+                    Recording your order...
                   </div>
                 )}
 
@@ -365,35 +397,19 @@ export default function PaymentPage() {
               </motion.div>
             )}
 
-            {/* ═══ CARD ═══ */}
+            {/* ═══ CARD — recorded as pay-at-counter; no card data is collected or stored ═══ */}
             {method === "card" && (
               <motion.div key="card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                 className="glass-elevated rounded-2xl border-0 p-6 mb-8">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Card Number</label>
-                    <input type="text" placeholder="1234 5678 9012 3456" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Expiry</label>
-                      <input type="text" placeholder="MM/YY" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">CVV</label>
-                      <input type="password" placeholder="123" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Name on Card</label>
-                    <input type="text" placeholder="Your name" className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20" />
-                  </div>
+                <div className="bg-muted/60 border border-border rounded-xl p-4 mb-5 text-xs text-muted-foreground leading-relaxed">
+                  Online card payments aren't available yet. Choose this option to pay by card at the counter — your order is recorded
+                  now and settled in person. No card details are entered or stored on this site.
                 </div>
-                <button onClick={handleCardOrder} disabled={paymentStatus !== "idle"}
-                  className="mt-6 w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
-                  {paymentStatus !== "idle" ? (
-                    <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
-                  ) : `Pay ₹${total}`}
+                <button onClick={handleCardOrder} disabled={busy}
+                  className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
+                  {busy ? (
+                    <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Recording order...</>
+                  ) : `Record Order — Pay ₹${total} at Counter`}
                 </button>
               </motion.div>
             )}
@@ -405,10 +421,10 @@ export default function PaymentPage() {
                 <Building2 className="h-10 w-10 text-gold mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">Pay at the Counter</h3>
                 <p className="text-sm text-muted-foreground mb-6">Settle your bill at the register when you collect or finish your order.</p>
-                <button onClick={handleCashOrder} disabled={paymentStatus !== "idle"}
+                <button onClick={handleCashOrder} disabled={busy}
                   className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-warm-taupe text-white py-3.5 rounded-xl text-sm font-semibold transition-all hover:shadow-lg disabled:opacity-50">
-                  {paymentStatus !== "idle" ? (
-                    <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                  {busy ? (
+                    <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Recording order...</>
                   ) : "Confirm Order"}
                 </button>
               </motion.div>

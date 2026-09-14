@@ -8,6 +8,7 @@ import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
+import CafeAssistant from "./components/CafeAssistant";
 
 // Lazy load all route components
 const Landing = lazy(() => import("./pages/Landing.tsx"));
@@ -150,6 +151,7 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
+            <CafeAssistant />
             <Routes>
               {/* Public */}
               <Route path="/" element={<Landing />} />

@@ -25,14 +25,22 @@ export default function CheckoutPage() {
     }
     return "dine-in";
   });
-  const [tableNumber, setTableNumber] = useState("");
+  // Pre-fill the table number when the guest came from a table QR scan.
+  const [tableNumber, setTableNumber] = useState(() => {
+    try {
+      return window.sessionStorage.getItem("tbr-table") ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [formData, setFormData] = useState({ name: "", phone: "", address: "", notes: "" });
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; label: string; discount: number } | null>(null);
   const [couponError, setCouponError] = useState("");
   const convex = useConvex();
 
-  const taxRate = Number(settings?.taxRate ?? "5") / 100;
+  const taxRatePct = Number(settings?.taxRate ?? "5") || 5;
+  const taxRate = taxRatePct / 100;
   const tax = Math.round(total * taxRate);
   const discount = coupon?.discount ?? 0;
   const grandTotal = total + tax - discount;
@@ -154,9 +162,12 @@ export default function CheckoutPage() {
                     <label className="text-sm font-medium text-foreground">Table Number</label>
                     <input
                       type="number"
+                      min={1}
+                      max={999}
                       value={tableNumber}
                       onChange={(e) => setTableNumber(e.target.value)}
                       placeholder="Enter your table number"
+                      required
                       className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                     />
                   </div>
@@ -177,18 +188,19 @@ export default function CheckoutPage() {
                       required
                       className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
                     />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Phone Number</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                      required
-                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-                    />
-                  </div>
+                  </div>                    <div>
+                      <label className="text-sm font-medium text-foreground">Phone Number</label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="+91 98765 43210"
+                        required
+                        pattern="[0-9+\s\-]{10,15}"
+                        title="Enter a valid phone number (10–15 digits)"
+                        className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                      />
+                    </div>
                   {orderType === "delivery" && (
                     <div>
                       <label className="text-sm font-medium text-foreground">Delivery Address</label>
@@ -197,6 +209,9 @@ export default function CheckoutPage() {
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Full delivery address"
                         rows={3}
+                        required
+                        minLength={10}
+                        title="Please enter your complete delivery address"
                         className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 resize-none"
                       />
                     </div>
@@ -271,7 +286,7 @@ export default function CheckoutPage() {
 
                 <div className="border-t pt-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>₹{total}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Tax (5%)</span><span>₹{tax}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Tax ({taxRatePct}%)</span><span>₹{tax}</span></div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sage">
                       <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Discount</span>

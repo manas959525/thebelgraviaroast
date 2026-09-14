@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
 import { QrCode, ShoppingCart, Coffee, Check, Bell, Droplets, Utensils, Receipt, Brush, Sparkles } from "lucide-react";
@@ -27,6 +27,18 @@ export default function TableOrdering() {
 
   const [step, setStep] = useState<"scan" | "menu" | "cart">(qrTable ? "menu" : "scan");
   const [tableNum, setTableNum] = useState(qrTable);
+
+  // QR-scan guests are dining in by definition — carry the table number and
+  // order mode into checkout so nothing needs to be retyped.
+  useEffect(() => {
+    if (!qrTable.trim()) return;
+    try {
+      window.sessionStorage.setItem("tbr-table", qrTable.trim());
+      window.localStorage.setItem("tbr-order-mode", "dine-in");
+    } catch {
+      /* storage blocked — checkout just won't pre-fill */
+    }
+  }, [qrTable]);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const { allProducts } = useProductsWithFlags();
   // The global cart is the single source of truth — the same items flow into
@@ -208,7 +220,7 @@ export default function TableOrdering() {
               </div>
 
               {/* Products Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-24">
                 {filtered.map((product) => (
                   <div key={product.id} className={`bg-white rounded-2xl border overflow-hidden ${product.available ? "border-border/50" : "border-border/40 opacity-70"}`}>
                     <div className="relative">
@@ -290,6 +302,22 @@ export default function TableOrdering() {
           )}
         </div>
       </div>
+
+      {/* Floating cart bar (menu step, mobile-first) */}
+      {step === "menu" && totalItems > 0 && (
+        <div className="fixed bottom-16 lg:bottom-6 left-4 right-4 z-30 lg:left-auto lg:right-6 lg:w-80">
+          <Link
+            to="/checkout"
+            className="flex items-center justify-between bg-gold text-white rounded-2xl px-5 py-3.5 shadow-xl hover:bg-gold/90 transition-all"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <ShoppingCart className="h-4 w-4" />
+              {totalItems} item{totalItems === 1 ? "" : "s"} · ₹{totalPrice}
+            </span>
+            <span className="text-sm font-bold">View Cart →</span>
+          </Link>
+        </div>
+      )}
 
       <Footer />
     </div>

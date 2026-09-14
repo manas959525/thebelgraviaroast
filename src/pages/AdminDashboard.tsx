@@ -7,7 +7,7 @@ import {
   QrCode, Calendar, Search, Download,
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
-  Power, PowerOff, ChefHat, ExternalLink, Bot,
+  Power, PowerOff, ChefHat, ExternalLink, Bot, ShieldCheck,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
@@ -1377,6 +1377,43 @@ export default function AdminDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Server-side role gate: the backend enforces admin access on every mutation;
+  // this gives a friendly screen instead of silently failing panels.
+  const role = useQuery(api.cafe.myRole);
+
+  if (role !== undefined && role !== "admin") {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-6">
+        <div className="max-w-md text-center bg-white rounded-2xl border border-border p-8 shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/10 text-gold">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h1 className="text-lg font-bold text-foreground mb-2">Admin access required</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            You're signed in as {user?.isAnonymous ? "a guest" : "a customer account"}. The admin panel is only available to the café's admin account.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={async () => {
+                await signOut();
+                navigate("/auth?returnTo=%2Fdashboard");
+              }}
+              className="bg-gold hover:bg-gold/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            >
+              Switch account
+            </button>
+            <Link
+              to="/"
+              className="border border-border text-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-muted transition-all"
+            >
+              Back to café
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderSection = () => {
     switch (section) {

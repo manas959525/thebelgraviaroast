@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -54,7 +56,8 @@ function normalizePhone(raw: string): string | null {
 type Mode = "phone" | "email";
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, user, signIn } = useAuth();
+  const claimAdminRole = useMutation(api.cafe.claimAdminRole);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -69,11 +72,17 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const [error, setError] = useState<string | null>(null);
 
   // Navigate once authenticated — regardless of which provider completed the sign-in.
+  // Named (non-guest) sign-ins also claim the admin role if no admin exists yet
+  // (first-run bootstrap; the server no-ops once an admin is registered).
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate(redirect, { replace: true });
+    if (authLoading || !isAuthenticated) return;
+    if (user && !user.isAnonymous) {
+      void claimAdminRole({}).catch(() => {
+        /* first-run bootstrap only — safe to ignore */
+      });
     }
-  }, [authLoading, isAuthenticated, navigate, redirect]);
+    navigate(redirect, { replace: true });
+  }, [authLoading, isAuthenticated, navigate, redirect, user, claimAdminRole]);
 
   const sendCode = async (identifier: string, via: Mode) => {
     setIsLoading(true);

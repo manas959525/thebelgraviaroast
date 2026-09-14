@@ -6,13 +6,19 @@ import Footer from "@/components/Footer";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
-  const [sent, setSent] = useState(false);
 
+  /**
+   * Real delivery path: hand the message to the visitor's email client,
+   * addressed to the café inbox with everything pre-filled. Nothing is
+   * silently dropped, and no fake "sent" state is shown.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
-    setTimeout(() => setSent(false), 3000);
-    setForm({ name: "", email: "", subject: "", message: "" });
+    const subject = encodeURIComponent(`[Website] ${form.subject || "Enquiry from " + form.name}`);
+    const body = encodeURIComponent(
+      `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`,
+    );
+    window.location.href = `mailto:hello@thebelgraviaroast.in?subject=${subject}&body=${body}`;
   };
 
   const info = [
@@ -118,7 +124,7 @@ export default function Contact() {
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-gold/90 text-white py-3 rounded-xl text-sm font-semibold transition-all hover:shadow-lg"
               >
-                {sent ? "Message Sent!" : <>Send Message <Send className="h-4 w-4" /></>}
+                Open in Email App <Send className="h-4 w-4" />
               </button>
             </form>
           </motion.div>

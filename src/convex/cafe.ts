@@ -1,5 +1,38 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { products } from "../data/menu";
+
+// ─────────────────────────────────────────────────────
+// Auth helpers
+// ─────────────────────────────────────────────────────
+
+async function isAdminCtx(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) return false;
+  const user = await ctx.db.get(userId);
+  return user?.role === "admin";
+}
+
+/** Throws unless the caller is signed in with the admin role. */
+async function assertAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
+  if (!(await isAdminCtx(ctx))) {
+    throw new Error("Admin access required. Sign in with the café's admin account.");
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// Server-side price lookups (never trust client totals)
+// ─────────────────────────────────────────────────────
+
+function catalogProduct(productId: string) {
+  return products.find((p) => p.id === productId);
+}
+
+function clampStr(s: string | undefined, max: number): string | undefined {
+  const t = s?.trim();
+  return t ? t.slice(0, max) : undefined;
+}
 
 // ─────────────────────────────────────────────────────
 // Orders + Payments
@@ -38,58 +71,176 @@ export const placeOrder = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
+    // ── 1. Re-price every line from the server-side catalog ──
+    // The client's prices/totals are NEVER trusted: only catalog prices plus
+    // catalog-priced customizations/add-ons are used for the stored totals.
+    if (args.items.length === 0) throw new Error("Your cart is empty.");
+    if (args.items.length > 50) throw new Error("Too many items in a single order.");
+
+    const lines = args.items.map((item) => {
+      const product = catalogProduct(item.productId);
+      if (!product) {
+        throw new Error("One of the items is no longer on the menu. Please refresh and try again.");
+      }
+      if (!product.available) {
+        throw new Error(`${product.name} has just sold out. Please remove it and review your order.`);
+      }
+      const qty = Math.floor(item.quantity);
+      if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
+        throw new Error(`Invalid quantity for ${product.name}.`);
+      }
+      const customizations = (item.customizations ?? []).slice(0, 10);
+      const addOnNames = (item.addOns ?? []).slice(0, 10);
+
+      // Extras are priced from the catalog only — unknown option names add nothing.
+      let extras = 0;
+      product.customizations?.forEach((group) =>
+        group.options.forEach((opt) => {
+          if (customizations.includes(opt.name)) extras += opt.price;
+        }),
+      );
+      addOnNames.forEach((name) => {
+        const addOn = product.addOns?.find((a) => a.name === name);
+        if (addOn) extras += addOn.price;
+      });
+
+      const unit = (product.discountPrice ?? product.price) + extras;
+      return {
+        productId: product.id,
+        name: product.name,
+        price: unit,
+        quantity: qty,
+        customizations: customizations.length ? customizations : undefined,
+        addOns: addOnNames.length ? addOnNames : undefined,
+      };
+    });
+
+    const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
+
+    // ── 2. Tax from café settings (server-authoritative) ──
+    const taxRateRow = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "taxRate"))
+      .first();
+    const taxPct = Math.min(Math.max(Number(taxRateRow?.value ?? "5") || 5, 0), 30);
+    const tax = Math.round((subtotal * taxPct) / 100);
+
+    // ── 3. Re-validate + atomically redeem the coupon (usage-limit safe) ──
+    let discount = 0;
+    let couponCode: string | undefined = undefined;
+    if (args.couponCode) {
+      const code = args.couponCode.trim().toUpperCase().slice(0, 40);
+      const offer = await ctx.db
+        .query("offers")
+        .withIndex("by_code", (q) => q.eq("code", code))
+        .first();
+      const valid =
+        offer &&
+        offer.active &&
+        offer.validUntil > now &&
+        subtotal >= offer.minOrder &&
+        (offer.usageLimit == null || offer.usedCount < offer.usageLimit);
+      if (offer && valid) {
+        const raw =
+          offer.discountType === "percentage"
+            ? Math.round((subtotal * offer.discountValue) / 100)
+            : offer.discountValue;
+        discount = Math.min(raw, offer.maxDiscount ?? raw, subtotal);
+        couponCode = code;
+        await ctx.db.patch(offer._id, { usedCount: offer.usedCount + 1 });
+      }
+    }
+
+    const total = Math.max(0, subtotal + tax - discount);
+    if (Math.abs(total - args.total) > 1) {
+      throw new Error(
+        "Your total changed (the menu or offers were updated). Please go back and review your order.",
+      );
+    }
+
+    // ── 4. Dedupe: an order number can only ever create one order row ──
+    const orderNumber = args.orderNumber.trim().slice(0, 40);
+    const existing = await ctx.db
+      .query("orders")
+      .withIndex("by_orderNumber", (q) => q.eq("orderNumber", orderNumber))
+      .first();
+    if (existing) {
+      const payment = await ctx.db
+        .query("payments")
+        .withIndex("by_order", (q) => q.eq("orderId", existing._id))
+        .first();
+      return {
+        orderId: existing._id,
+        paymentId: payment?._id,
+        receiptId: payment?.receiptId ?? `RCPT-${orderNumber.replace(/^TBR-/, "").slice(0, 8)}`,
+      };
+    }
+
+    const tableNumber = args.tableNumber ? Math.floor(Number(args.tableNumber)) : undefined;
+    if (tableNumber !== undefined && (!Number.isFinite(tableNumber) || tableNumber < 1 || tableNumber > 999)) {
+      throw new Error("That table number doesn't look right.");
+    }
+
+    const userId = await getAuthUserId(ctx);
+
     const orderId = await ctx.db.insert("orders", {
-      orderNumber: args.orderNumber,
-      items: args.items,
-      subtotal: args.subtotal,
-      tax: args.tax,
-      discount: args.discount,
-      couponCode: args.couponCode,
-      total: args.total,
+      userId: userId ?? undefined,
+      orderNumber,
+      items: lines,
+      subtotal,
+      tax,
+      discount,
+      couponCode,
+      total,
       status: "pending",
       paymentStatus: "pending",
       paymentMethod: args.paymentMethod,
-      tableNumber: args.tableNumber ? Number(args.tableNumber) : undefined,
-      guestName: args.guestName,
-      guestPhone: args.guestPhone,
-      notes: args.notes,
+      tableNumber,
+      guestName: clampStr(args.guestName, 120),
+      guestPhone: clampStr(args.guestPhone, 24),
+      notes: clampStr(args.notes, 500),
       orderType: args.orderType,
     });
 
     const paymentId = await ctx.db.insert("payments", {
       orderId,
-      orderNumber: args.orderNumber,
-      amount: args.total,
+      orderNumber,
+      amount: total,
       method: args.paymentMethod,
       status: args.utr ? "pending_verification" : "pending",
-      utr: args.utr,
-      receiptId: `RCPT-${args.orderNumber.replace(/^TBR-/, "").slice(0, 8)}`,
+      utr: clampStr(args.utr, 40),
+      receiptId: `RCPT-${orderNumber.replace(/^TBR-/, "").slice(0, 8)}`,
       paidAt: now,
     });
-
-    // Redeem the coupon exactly once, when the order is placed.
-    if (args.couponCode) {
-      const offer = await ctx.db
-        .query("offers")
-        .withIndex("by_code", (q) => q.eq("code", args.couponCode!))
-        .first();
-      if (offer) {
-        await ctx.db.patch(offer._id, { usedCount: offer.usedCount + 1 });
-      }
-    }
 
     return {
       orderId,
       paymentId,
-      receiptId: `RCPT-${args.orderNumber.replace(/^TBR-/, "").slice(0, 8)}`,
+      receiptId: `RCPT-${orderNumber.replace(/^TBR-/, "").slice(0, 8)}`,
     };
   },
 });
 
+// Admin-only: full order feed for the dashboard / kitchen display.
 export const listOrders = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
     return await ctx.db.query("orders").order("desc").take(100);
+  },
+});
+
+// Signed-in customer: only their own orders (never anyone else's).
+export const listMyOrders = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return await ctx.db
+      .query("orders")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(50);
   },
 });
 
@@ -122,6 +273,7 @@ export const updateOrderStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     await ctx.db.patch(args.id, { status: args.status });
   },
 });
@@ -129,6 +281,7 @@ export const updateOrderStatus = mutation({
 export const listPayments = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
     return await ctx.db.query("payments").order("desc").take(100);
   },
 });
@@ -139,6 +292,7 @@ export const verifyPayment = mutation({
     verified: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const payment = await ctx.db.get(args.id);
     if (!payment) return;
     await ctx.db.patch(args.id, {
@@ -175,6 +329,7 @@ export const recordServiceRequest = mutation({
 export const resolveServiceRequest = mutation({
   args: { id: v.id("serviceRequests") },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     await ctx.db.patch(args.id, { resolved: true });
   },
 });
@@ -204,6 +359,7 @@ export const recordUpsellEvent = mutation({
 export const listUpsellEvents = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
     return await ctx.db.query("upsellEvents").order("desc").take(500);
   },
 });
@@ -211,6 +367,7 @@ export const listUpsellEvents = query({
 export const listServiceRequests = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
     return await ctx.db.query("serviceRequests").order("desc").take(100);
   },
 });
@@ -251,6 +408,7 @@ export const listActiveOffers = query({
 export const saveOffer = mutation({
   args: offerPatch,
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const existing = await ctx.db
       .query("offers")
       .withIndex("by_code", (q) => q.eq("code", args.code))
@@ -271,6 +429,7 @@ export const saveOffer = mutation({
 export const deleteOffer = mutation({
   args: { code: v.string() },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const offer = await ctx.db
       .query("offers")
       .withIndex("by_code", (q) => q.eq("code", args.code))
@@ -324,6 +483,7 @@ export const setProductAvailability = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const existing = await ctx.db
       .query("productFlags")
       .withIndex("by_product", (q) => q.eq("productId", args.productId))
@@ -354,6 +514,7 @@ export const saveTable = mutation({
     section: v.string(),
   },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const existing = await ctx.db
       .query("tables")
       .withIndex("by_number", (q) => q.eq("number", args.number))
@@ -369,6 +530,7 @@ export const saveTable = mutation({
 export const deleteTable = mutation({
   args: { number: v.number() },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const existing = await ctx.db
       .query("tables")
       .withIndex("by_number", (q) => q.eq("number", args.number))
@@ -388,6 +550,7 @@ export const setTableStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     const table = await ctx.db
       .query("tables")
       .withIndex("by_number", (q) => q.eq("number", args.number))
@@ -417,6 +580,7 @@ export const listSettings = query({
 export const saveSettings = mutation({
   args: { values: v.array(v.object({ key: v.string(), value: v.string() })) },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     for (const { key, value } of args.values) {
       const existing = await ctx.db
         .query("settings")
@@ -449,6 +613,7 @@ export const listApprovedReviews = query({
 export const listAllReviews = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
     return await ctx.db.query("reviews").order("desc").take(100);
   },
 });
@@ -472,6 +637,7 @@ export const submitReview = mutation({
 export const setReviewApproval = mutation({
   args: { id: v.id("reviews"), approved: v.boolean() },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     await ctx.db.patch(args.id, { approved: args.approved });
   },
 });
@@ -479,7 +645,45 @@ export const setReviewApproval = mutation({
 export const deleteReview = mutation({
   args: { id: v.id("reviews") },
   handler: async (ctx, args) => {
+    await assertAdmin(ctx);
     await ctx.db.delete(args.id);
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// Admin identity
+// ─────────────────────────────────────────────────────
+
+/** Returns the caller's role (null when signed out). Used by the admin UI gate. */
+export const myRole = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    return user?.role ?? null;
+  },
+});
+
+/**
+ * First-run bootstrap: the very first signed-in account may claim the admin
+ * role, but only while no admin exists. After that, roles are managed in the
+ * Convex dashboard for security.
+ */
+export const claimAdminRole = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in first, then claim the admin role.");
+    const admins = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "admin"))
+      .collect();
+    if (admins.length > 0) {
+      return { claimed: false, reason: "An admin account already exists. Ask the owner to grant you access from the Convex dashboard." };
+    }
+    await ctx.db.patch(userId, { role: "admin" });
+    return { claimed: true };
   },
 });
 
