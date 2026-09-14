@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/hooks/use-auth";
+import logo from "@/assets/logo.svg";
 
 const navLinks = [
   { to: "/", label: "Home", icon: Home },
@@ -75,10 +76,12 @@ export default function Navbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between lg:h-20">
             {/* Logo — The Belgravia Roast */}
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-dusty-rose text-white transition-transform group-hover:scale-105">
-                <Coffee className="h-5 w-5" />
-              </div>
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <img
+                src={logo}
+                alt="The Belgravia Roast"
+                className="h-10 w-10 rounded-full transition-transform group-hover:scale-105"
+              />
               <div className="hidden sm:block leading-tight">
                 <div className={`text-[10px] font-medium tracking-[0.2em] uppercase -mb-0.5 ${onDark ? "text-white/50" : "text-muted-foreground"}`}>The</div>
                 <span className={`text-base font-bold tracking-tight ${onDark ? "text-white" : "text-foreground"}`}>BELGRAVIA</span>

@@ -21,13 +21,13 @@ import {
   Mail,
   Phone,
   UserX,
-  Coffee,
   ShieldCheck,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import logo from "@/assets/logo.svg";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -170,8 +170,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       <div className="hidden lg:flex lg:w-1/2 bg-cafe-gradient relative overflow-hidden items-center justify-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,rgba(196,106,43,0.2),transparent_60%)]" />
         <div className="relative text-center px-12">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/20 text-gold mx-auto mb-6">
-            <Coffee className="h-8 w-8" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 mx-auto mb-6 overflow-hidden">
+            <img src={logo} alt="The Belgravia Roast" className="h-16 w-16" />
           </div>
           <h2 className="text-3xl font-bold text-white mb-3">The Belgravia Roast</h2>
           <p className="text-white/50 leading-relaxed max-w-sm">
@@ -185,9 +185,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-2.5 mb-8 justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold text-white">
-              <Coffee className="h-5 w-5" />
-            </div>
+            <img src={logo} alt="The Belgravia Roast" className="h-10 w-10 rounded-full" />
             <span className="text-xl font-bold text-foreground">
               The Belgravia <span className="text-gold">Roast</span>
             </span>

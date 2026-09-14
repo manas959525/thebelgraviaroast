@@ -3,6 +3,7 @@ import { Coffee, Instagram, Mail, Phone, MapPin, ArrowRight } from "lucide-react
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import logo from "@/assets/logo.svg";
 
 const footerLinks = {
   explore: [
@@ -43,9 +44,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-rose">
-                <Coffee className="h-5 w-5 text-white" />
-              </div>
+              <img
+                src={logo}
+                alt="The Belgravia Roast"
+                className="h-11 w-11 rounded-full"
+              />
               <div>
                 <div className="text-[9px] text-white/50 tracking-[0.2em] uppercase">The</div>
                 <span className="text-xl font-bold">BELGRAVIA</span>

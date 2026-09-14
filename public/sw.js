@@ -6,7 +6,7 @@
  * the app shell and menu stay usable. Never cache API/Convex data — that stays
  * live and reactive.
  */
-const CACHE = "belgravia-v1";
+const CACHE = "belgravia-v2";
 const SHELL = ["/", "/logo.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
