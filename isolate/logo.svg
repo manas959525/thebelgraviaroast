@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="The Belgravia Roast">
+  <!-- Badge background -->
+  <circle cx="256" cy="256" r="252" fill="#F4EFE4"/>
+  <!-- Double ring -->
+  <circle cx="256" cy="256" r="238" fill="none" stroke="#1B2A3D" stroke-width="9"/>
+  <circle cx="256" cy="256" r="216" fill="none" stroke="#1B2A3D" stroke-width="3"/>
+  <!-- Arched wordmark -->
+  <defs>
+    <path id="arcTop" d="M 86 256 A 170 170 0 0 1 426 256"/>
+  </defs>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="bold" fill="#1B2A3D" letter-spacing="6">
+    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">THE BELGRAVIA</textPath>
+  </text>
+  <!-- Steam -->
+  <g fill="none" stroke="#C2A164" stroke-width="7" stroke-linecap="round">
+    <path d="M260 228 c-16 -20 16 -30 0 -50 c-12 -16 8 -24 0 -38"/>
+    <path d="M234 228 c-12 -14 12 -22 0 -38"/>
+  </g>
+  <!-- Cup, handle, saucer -->
+  <g fill="none" stroke="#C2A164" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M186 244 h140 c0 46 -32 72 -70 72 s-70 -26 -70 -72 z"/>
+    <path d="M326 258 c26 2 34 24 16 38 c-8 6 -18 8 -26 6"/>
+    <path d="M172 338 c28 13 140 13 168 0"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="256" y="410" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" fill="#1B2A3D" letter-spacing="10">ROAST</text>
+  <text x="256" y="448" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" fill="#1B2A3D" letter-spacing="4">EST. 2023</text>
+</svg>
