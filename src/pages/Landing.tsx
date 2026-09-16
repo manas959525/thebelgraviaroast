@@ -240,7 +240,7 @@ function FindYourTable() {
   const qrUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/table-ordering`
-      : "https://thebelgraviaroast.in/table-ordering";
+      : "https://thebelgraviaroast.freebuff.app/table-ordering";
   const perks = [
     "Order straight from your seat — no app, no sign-up",
     "Watch your order progress live on your phone",

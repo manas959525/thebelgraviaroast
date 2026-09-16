@@ -18,14 +18,14 @@ export default function Contact() {
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`,
     );
-    window.location.href = `mailto:hello@thebelgraviaroast.in?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:manasshekhawat095@gmail.com?subject=${subject}&body=${body}`;
   };
 
   const info = [
     { icon: MapPin, label: "Visit Us", value: "42 Belgravia Lane, New Delhi 110001" },
-    { icon: Phone, label: "Call Us", value: "+91 98765 43210" },
-    { icon: Mail, label: "Email", value: "hello@thebelgraviaroast.in" },
-    { icon: Clock, label: "Hours", value: "Mon–Sun: 7:00 AM – 11:00 PM" },
+    { icon: Phone, label: "Call Us", value: "+91 77280 59988", href: "tel:+917728059988" },
+    { icon: Mail, label: "Email", value: "manasshekhawat095@gmail.com", href: "mailto:manasshekhawat095@gmail.com" },
+    { icon: Clock, label: "Hours", value: "Mon–Sun: 10:00 AM – 10:00 PM" },
   ];
 
   return (
@@ -58,7 +58,13 @@ export default function Contact() {
                     </div>
                     <div>
                       <div className="text-sm font-medium text-foreground">{item.label}</div>
-                      <div className="text-sm text-muted-foreground">{item.value}</div>
+                      {item.href ? (
+                        <a href={item.href} className="text-sm text-muted-foreground hover:text-gold transition-colors break-all">
+                          {item.value}
+                        </a>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">{item.value}</div>
+                      )}
                     </div>
                   </div>
                 );

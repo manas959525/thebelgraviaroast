@@ -208,7 +208,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                           <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
                             name="phone"
-                            placeholder="+91 98765 43210"
+                            placeholder="+91 7728059988"
                             type="tel"
                             inputMode="tel"
                             autoComplete="tel"

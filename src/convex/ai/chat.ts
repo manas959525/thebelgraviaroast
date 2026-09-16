@@ -228,7 +228,7 @@ function offlineReply(message: string, language: Lang, intent: Intent, reason: "
   } else if (has("offer", "coupon", "discount")) {
     reply += "\n\nLive coupons are on the Offers page: /offers (e.g. BELGRAVIA10 — 10% off your first order).";
   } else if (has("open", "timing", "hours", "address", "location")) {
-    reply += "\n\nWe're open 8:00 AM – 11:00 PM at 42 Belgravia Lane, New Delhi. More info: /about";
+    reply += "\n\nWe're open 10:00 AM – 10:00 PM daily at 42 Belgravia Lane, New Delhi. More info: /about";
   }
 
   return {

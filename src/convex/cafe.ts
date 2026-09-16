@@ -599,6 +599,48 @@ export const saveSettings = mutation({
 // Reviews
 // ─────────────────────────────────────────────────────
 
+/**
+ * One-time contact-info migration (Sep 2026): moves the seeded placeholder
+ * phone/email/hours to the real, verified business details. Idempotent and
+ * conservative — only patches keys whose value still matches a known-old
+ * default, so admin-customized values are never overwritten.
+ */
+export const migrateContactInfo = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const updates: { key: string; value: string; oldValues: string[] }[] = [
+      { key: "phone", value: "+91 7728059988", oldValues: ["+91 98765 43210", "+91 77280 59988"] },
+      { key: "email", value: "manasshekhawat095@gmail.com", oldValues: ["hello@thebelgraviaroast.in"] },
+      { key: "openTime", value: "10:00", oldValues: ["08:00"] },
+      { key: "closeTime", value: "22:00", oldValues: ["23:00"] },
+    ];
+    const patched: string[] = [];
+    for (const u of updates) {
+      const existing = await ctx.db
+        .query("settings")
+        .withIndex("by_key", (q) => q.eq("key", u.key))
+        .first();
+      if (!existing || u.oldValues.includes(existing.value)) {
+        if (existing) {
+          await ctx.db.patch(existing._id, { value: u.value });
+        } else {
+          await ctx.db.insert("settings", { key: u.key, value: u.value });
+        }
+        patched.push(u.key);
+      }
+    }
+    const owner = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "owner"))
+      .first();
+    if (!owner) {
+      await ctx.db.insert("settings", { key: "owner", value: "Manas Shekhawat" });
+      patched.push("owner");
+    }
+    return { patched };
+  },
+});
+
 export const listApprovedReviews = query({
   args: {},
   handler: async (ctx) => {
@@ -706,14 +748,15 @@ const DEFAULT_TABLES: { number: number; capacity: number; section: string }[] = 
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   cafeName: "The Belgravia Roast",
+  owner: "Manas Shekhawat",
   tagline: "Where Every Roast Tells a Story.",
-  phone: "+91 98765 43210",
-  email: "hello@thebelgraviaroast.in",
+  phone: "+91 7728059988",
+  email: "manasshekhawat095@gmail.com",
   address: "42 Belgravia Lane, New Delhi 110001",
   upiId: "7728059988@ptyes",
   taxRate: "5",
-  openTime: "08:00",
-  closeTime: "23:00",
+  openTime: "10:00",
+  closeTime: "22:00",
   avgPrepMinutes: "12",
 };
 

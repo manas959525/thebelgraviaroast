@@ -50,6 +50,9 @@ export default function About() {
           >
             The Belgravia Roast was born from a simple conviction: that great coffee and great company
             can transform an ordinary day into something worth remembering.
+            <span className="mt-3 block text-white/80">
+              Founded and run by <span className="font-semibold text-white">Manas Shekhawat</span>.
+            </span>
           </motion.p>
         </div>
       </section>

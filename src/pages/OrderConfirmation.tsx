@@ -307,7 +307,7 @@ export default function OrderConfirmation() {
               <div>
                 <h4 className="font-semibold text-sm mb-1">Need Help?</h4>
                 <p className="text-xs text-muted-foreground">
-                  Contact us at <span className="font-medium text-foreground">+91 98765 43210</span> or visit the counter for any queries about your order.
+                  Contact us at <a href="tel:+917728059988" className="font-medium text-foreground hover:text-gold transition-colors">+91 77280 59988</a> or visit the counter for any queries about your order.
                 </p>
               </div>
             </div>

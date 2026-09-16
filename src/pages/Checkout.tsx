@@ -194,7 +194,7 @@ export default function CheckoutPage() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+91 98765 43210"
+                        placeholder="+91 7728059988"
                         required
                         pattern="[0-9+\s\-]{10,15}"
                         title="Enter a valid phone number (10–15 digits)"

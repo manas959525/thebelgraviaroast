@@ -904,7 +904,7 @@ function TablesView() {
 }
 
 const TABLE_QR_URL = (n: number) =>
-  `${typeof window !== "undefined" ? window.location.origin : "https://thebelgraviaroast.in"}/table-ordering?table=${n}`;
+  `${typeof window !== "undefined" ? window.location.origin : "https://thebelgraviaroast.freebuff.app"}/table-ordering?table=${n}`;
 
 function downloadQrSvg(table: number) {
   const el = document.getElementById(`table-qr-${table}`);

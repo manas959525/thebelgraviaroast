@@ -32,7 +32,7 @@ export default function Footer() {
   const [email, setEmail] = useState("");
   // Café contact details are managed by the admin in Settings.
   const settings = useQuery(api.cafe.listSettings);
-  const phone = settings?.phone ?? "+91 98765 43210";
+  const phone = settings?.phone ?? "+91 77280 59988";
   const address = settings?.address ?? "42 Belgravia Lane, New Delhi";
 
   return (
@@ -99,11 +99,20 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-1.5">
               <Phone className="h-3 w-3" />
-              <span>{phone}</span>
+              <a href="tel:+917728059988" className="hover:text-dusty-rose transition-colors">
+                <span>{phone}</span>
+              </a>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {[Instagram, Mail].map((Icon, i) => (
+            <a
+              href="mailto:manasshekhawat095@gmail.com"
+              aria-label="Email us"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-dusty-rose/20 text-white/50 hover:text-dusty-rose transition-all"
+            >
+              <Mail className="h-4 w-4" />
+            </a>
+            {[Instagram].map((Icon, i) => (
               <a key={i} href="#" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-dusty-rose/20 text-white/50 hover:text-dusty-rose transition-all">
                 <Icon className="h-4 w-4" />
               </a>

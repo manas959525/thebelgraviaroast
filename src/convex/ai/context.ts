@@ -8,7 +8,7 @@ import { products, categories } from "../../data/menu";
 
 export const FAQ_SNIPPET = `
 Q: Where are you located? A: 42 Belgravia Lane, New Delhi 110001.
-Q: What are your opening hours? A: 8:00 AM to 11:00 PM, every day.
+Q: What are your opening hours? A: 10:00 AM to 10:00 PM, every day.
 Q: Do you take table reservations? A: Yes — walk-ins are welcome and you can reserve via the Contact page or by phone.
 Q: Do you have Wi-Fi? A: Yes, complimentary high-speed Wi-Fi for all guests.
 Q: Is there parking? A: Yes, free guest parking behind the café.
@@ -21,8 +21,9 @@ Q: How do coupons work? A: Apply a coupon code at checkout. Current public codes
 export const BUSINESS_SNIPPET = `
 Name: The Belgravia Roast — premium specialty café, New Delhi.
 Tagline: "Where Every Roast Tells a Story."
-Hours: 8:00 AM – 11:00 PM daily. Phone: +91 98765 43210. Email: hello@thebelgraviaroast.in.
+Hours: 10:00 AM – 10:00 PM daily. Phone: +91 77280 59988. Email: manasshekhawat095@gmail.com.
 Address: 42 Belgravia Lane, New Delhi 110001.
+Owner: Manas Shekhawat.
 Signature drinks: Belgravia Signature Roast (₹179) and Belgravia Signature Cold Coffee (₹199).
 Loyalty: every ₹100 spent earns 1 bean; 50 beans = a free regular coffee.
 Ratings: 4.9★ average from 2,000+ guests. Average preparation time ~12 minutes.`;
