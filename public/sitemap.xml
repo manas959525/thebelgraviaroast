@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- ===== Core pages ===== -->
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/menu</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- ===== Interactive / high-value public pages ===== -->
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/build-your-drink</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/offers</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/table-ordering</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ===== Informational pages ===== -->
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/about</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/contact</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- ===== Customer utility ===== -->
+  <url>
+    <loc>https://thebelgraviaroast.freebuff.app/track-order</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- ===== Menu: Coffee ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/belgravia-signature-roast</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/espresso</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/double-espresso</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/americano</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cappuccino</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cafe-latte</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/flat-white</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cafe-mocha</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/caramel-latte</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/hazelnut-latte</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/vanilla-latte</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Cold Coffee ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/belgravia-signature-cold-coffee</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/classic-cold-coffee</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/iced-latte</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/iced-americano</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/caramel-frappe</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/mocha-frappe</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/chocolate-frappe</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Shakes & Refreshers ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/chocolate-shake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/oreo-shake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/strawberry-shake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/vanilla-shake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/lemon-iced-tea</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/peach-iced-tea</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/fresh-lime-soda</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Pizza ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/margherita</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/farmhouse</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/veggie-supreme</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/paneer-tikka-pizza</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheese-corn-pizza</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/spicy-mexican-pizza</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Burgers ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/classic-veg-burger</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheese-burger</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/double-cheese-burger</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/crispy-paneer-burger</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/spicy-mexican-burger</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Sandwiches ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/grilled-veg-sandwich</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/club-sandwich</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/paneer-tikka-sandwich</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheese-corn-sandwich</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/peri-peri-sandwich</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Pasta ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/alfredo-pasta</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/arrabbiata-pasta</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/pink-sauce-pasta</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheese-pasta</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Sides ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/classic-fries</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/peri-peri-fries</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/loaded-cheese-fries</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/garlic-bread</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheese-garlic-bread</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/nachos</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+  <!-- ===== Menu: Desserts ===== -->
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/chocolate-brownie</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/brownie-with-ice-cream</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/cheesecake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/belgian-chocolate-cake</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/classic-waffle</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/chocolate-waffle</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+  <url><loc>https://thebelgraviaroast.freebuff.app/menu/artisan-ice-cream</loc><lastmod>2026-09-16</lastmod><priority>0.7</priority></url>
+
+</urlset>

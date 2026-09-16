@@ -1,0 +1,20 @@
+# The Belgravia Roast — robots.txt
+# https://thebelgraviaroast.freebuff.app/
+
+User-agent: *
+Allow: /
+
+# Private / transactional areas — no crawl value for search engines
+Disallow: /dashboard
+Disallow: /kitchen
+Disallow: /auth
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment
+Disallow: /order-confirmation
+Disallow: /orders
+
+# Note: JS/CSS under /assets/ is intentionally NOT blocked —
+# Googlebot must fetch it to render this React app for indexing.
+
+Sitemap: https://thebelgraviaroast.freebuff.app/sitemap.xml
