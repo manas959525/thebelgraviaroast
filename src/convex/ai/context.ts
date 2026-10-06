@@ -9,7 +9,7 @@ import { products, categories } from "../../data/menu";
 export const FAQ_SNIPPET = `
 Q: Where are you located? A: 42 Belgravia Lane, New Delhi 110001.
 Q: What are your opening hours? A: 10:00 AM to 10:00 PM, every day.
-Q: Do you take table reservations? A: Yes — walk-ins are welcome and you can reserve via the Contact page or by phone.
+Q: Do you take table reservations? A: Yes — walk-ins are welcome and you can book online on the Reservations page (/reservations), or call +91 77280 59988.
 Q: Do you have Wi-Fi? A: Yes, complimentary high-speed Wi-Fi for all guests.
 Q: Is there parking? A: Yes, free guest parking behind the café.
 Q: Are vegan / dairy-free options available? A: Yes — oat and almond milk are available for any coffee at ₹30, and most desserts can be made dairy-free on request.

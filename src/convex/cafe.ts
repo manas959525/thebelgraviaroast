@@ -34,6 +34,64 @@ function clampStr(s: string | undefined, max: number): string | undefined {
   return t ? t.slice(0, max) : undefined;
 }
 
+interface OrderableItem {
+  id: string;
+  name: string;
+  price: number;
+  discountPrice?: number;
+  available: boolean;
+  customizations?: { name: string; options: { name: string; price: number }[] }[];
+  addOns?: { name: string; price: number }[];
+}
+
+/**
+ * Server-authoritative item resolution used when pricing orders:
+ * static catalog + admin price/name edits (productOverrides) + live
+ * availability flags + admin-added custom items. Returns null when the
+ * item was removed / hidden by an admin.
+ */
+async function resolveOrderItem(
+  ctx: QueryCtx | MutationCtx,
+  productId: string,
+): Promise<OrderableItem | null> {
+  const flag = await ctx.db
+    .query("productFlags")
+    .withIndex("by_product", (q) => q.eq("productId", productId))
+    .first();
+
+  const staticProduct = catalogProduct(productId);
+  if (staticProduct) {
+    const override = await ctx.db
+      .query("productOverrides")
+      .withIndex("by_product", (q) => q.eq("productId", productId))
+      .first();
+    if (override?.hidden) return null;
+    const priceEdited = typeof override?.price === "number" && override.price > 0;
+    return {
+      id: staticProduct.id,
+      name: clampStr(override?.name, 120) ?? staticProduct.name,
+      price: priceEdited ? (override!.price as number) : staticProduct.price,
+      // An admin price edit replaces any static sale price entirely.
+      discountPrice: priceEdited ? undefined : staticProduct.discountPrice,
+      available: flag ? flag.available : staticProduct.available,
+      customizations: staticProduct.customizations,
+      addOns: staticProduct.addOns,
+    };
+  }
+
+  const custom = await ctx.db
+    .query("customProducts")
+    .withIndex("by_productId", (q) => q.eq("productId", productId))
+    .first();
+  if (!custom) return null;
+  return {
+    id: custom.productId,
+    name: custom.name,
+    price: custom.price,
+    available: flag ? flag.available : custom.available,
+  };
+}
+
 // ─────────────────────────────────────────────────────
 // Orders + Payments
 // ─────────────────────────────────────────────────────
@@ -77,43 +135,45 @@ export const placeOrder = mutation({
     if (args.items.length === 0) throw new Error("Your cart is empty.");
     if (args.items.length > 50) throw new Error("Too many items in a single order.");
 
-    const lines = args.items.map((item) => {
-      const product = catalogProduct(item.productId);
-      if (!product) {
-        throw new Error("One of the items is no longer on the menu. Please refresh and try again.");
-      }
-      if (!product.available) {
-        throw new Error(`${product.name} has just sold out. Please remove it and review your order.`);
-      }
-      const qty = Math.floor(item.quantity);
-      if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
-        throw new Error(`Invalid quantity for ${product.name}.`);
-      }
-      const customizations = (item.customizations ?? []).slice(0, 10);
-      const addOnNames = (item.addOns ?? []).slice(0, 10);
+    const lines = await Promise.all(
+      args.items.map(async (item) => {
+        const product = await resolveOrderItem(ctx, item.productId);
+        if (!product) {
+          throw new Error("One of the items is no longer on the menu. Please refresh and try again.");
+        }
+        if (!product.available) {
+          throw new Error(`${product.name} has just sold out. Please remove it and review your order.`);
+        }
+        const qty = Math.floor(item.quantity);
+        if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
+          throw new Error(`Invalid quantity for ${product.name}.`);
+        }
+        const customizations = (item.customizations ?? []).slice(0, 10);
+        const addOnNames = (item.addOns ?? []).slice(0, 10);
 
-      // Extras are priced from the catalog only — unknown option names add nothing.
-      let extras = 0;
-      product.customizations?.forEach((group) =>
-        group.options.forEach((opt) => {
-          if (customizations.includes(opt.name)) extras += opt.price;
-        }),
-      );
-      addOnNames.forEach((name) => {
-        const addOn = product.addOns?.find((a) => a.name === name);
-        if (addOn) extras += addOn.price;
-      });
+        // Extras are priced from the catalog only — unknown option names add nothing.
+        let extras = 0;
+        product.customizations?.forEach((group) =>
+          group.options.forEach((opt) => {
+            if (customizations.includes(opt.name)) extras += opt.price;
+          }),
+        );
+        addOnNames.forEach((name) => {
+          const addOn = product.addOns?.find((a) => a.name === name);
+          if (addOn) extras += addOn.price;
+        });
 
-      const unit = (product.discountPrice ?? product.price) + extras;
-      return {
-        productId: product.id,
-        name: product.name,
-        price: unit,
-        quantity: qty,
-        customizations: customizations.length ? customizations : undefined,
-        addOns: addOnNames.length ? addOnNames : undefined,
-      };
-    });
+        const unit = (product.discountPrice ?? product.price) + extras;
+        return {
+          productId: product.id,
+          name: product.name,
+          price: unit,
+          quantity: qty,
+          customizations: customizations.length ? customizations : undefined,
+          addOns: addOnNames.length ? addOnNames : undefined,
+        };
+      }),
+    );
 
     const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
 
@@ -497,6 +557,198 @@ export const setProductAvailability = mutation({
 });
 
 // ─────────────────────────────────────────────────────
+// Catalog edits: admin price/name edits + admin-added items
+// ─────────────────────────────────────────────────────
+
+/** Public: the storefront merges these edits onto the static catalog. */
+export const listProductOverrides = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("productOverrides").collect();
+  },
+});
+
+/** Public: items the admin added on top of the static catalog. */
+export const listCustomProducts = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("customProducts").collect();
+  },
+});
+
+/** Admin: edit a static catalog item (or soft-remove it via hidden). */
+export const saveProductOverride = mutation({
+  args: {
+    productId: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    price: v.optional(v.number()),
+    image: v.optional(v.string()),
+    isVeg: v.optional(v.boolean()),
+    hidden: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    if (!catalogProduct(args.productId)) {
+      throw new Error("Unknown catalog item.");
+    }
+    if (args.price !== undefined && (!Number.isFinite(args.price) || args.price <= 0)) {
+      throw new Error("Price must be greater than zero.");
+    }
+    const patch: {
+      name?: string;
+      description?: string;
+      price?: number;
+      image?: string;
+      isVeg?: boolean;
+      hidden?: boolean;
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
+    // Only touch the fields that were actually provided so a price-only edit
+    // never wipes a previously saved name/description override.
+    if (args.name !== undefined) patch.name = clampStr(args.name, 120);
+    if (args.description !== undefined) patch.description = clampStr(args.description, 600);
+    if (args.price !== undefined) patch.price = args.price;
+    if (args.image !== undefined) patch.image = clampStr(args.image, 500);
+    if (args.isVeg !== undefined) patch.isVeg = args.isVeg;
+    if (args.hidden !== undefined) patch.hidden = args.hidden;
+    const existing = await ctx.db
+      .query("productOverrides")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, patch);
+      return existing._id;
+    }
+    return await ctx.db.insert("productOverrides", { productId: args.productId, ...patch });
+  },
+});
+
+/** Admin: revert an edited/hidden item back to the static catalog entry. */
+export const clearProductOverride = mutation({
+  args: { productId: v.string() },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const existing = await ctx.db
+      .query("productOverrides")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+  },
+});
+
+/** Admin: add a brand-new menu item. */
+export const addCustomProduct = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    image: v.string(),
+    category: v.string(),
+    isVeg: v.boolean(),
+    calories: v.optional(v.number()),
+    prepTime: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const name = clampStr(args.name, 120);
+    const description = clampStr(args.description, 600);
+    const image = clampStr(args.image, 500);
+    if (!name || !description) throw new Error("Name and description are required.");
+    if (!Number.isFinite(args.price) || args.price <= 0) {
+      throw new Error("Price must be greater than zero.");
+    }
+    if (!image) throw new Error("An image URL is required.");
+    const slugBase =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "item";
+    const slug = `${slugBase}-${Date.now().toString(36).slice(-4)}`;
+    const productId = `db-${slug}`;
+    const duplicate = await ctx.db
+      .query("customProducts")
+      .withIndex("by_productId", (q) => q.eq("productId", productId))
+      .first();
+    if (duplicate) throw new Error("That item already exists.");
+    return await ctx.db.insert("customProducts", {
+      productId,
+      slug,
+      name,
+      description,
+      price: Math.round(args.price),
+      image,
+      category: args.category,
+      isVeg: args.isVeg,
+      rating: 4.5,
+      prepTime: Math.min(Math.max(Math.round(args.prepTime ?? 5), 1), 120),
+      calories: args.calories,
+      tags: [],
+      available: true,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** Admin: edit an admin-added item (price, name, availability, …). */
+export const updateCustomProduct = mutation({
+  args: {
+    productId: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    price: v.optional(v.number()),
+    image: v.optional(v.string()),
+    category: v.optional(v.string()),
+    isVeg: v.optional(v.boolean()),
+    available: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const existing = await ctx.db
+      .query("customProducts")
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .first();
+    if (!existing) throw new Error("Item not found.");
+    if (args.price !== undefined && (!Number.isFinite(args.price) || args.price <= 0)) {
+      throw new Error("Price must be greater than zero.");
+    }
+    const patch: {
+      name?: string;
+      description?: string;
+      price?: number;
+      image?: string;
+      category?: string;
+      isVeg?: boolean;
+      available?: boolean;
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
+    if (args.name !== undefined) patch.name = clampStr(args.name, 120) ?? existing.name;
+    if (args.description !== undefined)
+      patch.description = clampStr(args.description, 600) ?? existing.description;
+    if (args.price !== undefined) patch.price = args.price;
+    if (args.image !== undefined) patch.image = clampStr(args.image, 500) ?? existing.image;
+    if (args.category !== undefined) patch.category = args.category;
+    if (args.isVeg !== undefined) patch.isVeg = args.isVeg;
+    if (args.available !== undefined) patch.available = args.available;
+    await ctx.db.patch(existing._id, patch);
+  },
+});
+
+/** Admin: permanently remove an admin-added item. */
+export const deleteCustomProduct = mutation({
+  args: { productId: v.string() },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const existing = await ctx.db
+      .query("customProducts")
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+  },
+});
+
+// ─────────────────────────────────────────────────────
 // Tables
 // ─────────────────────────────────────────────────────
 
@@ -560,6 +812,238 @@ export const setTableStatus = mutation({
       return;
     }
     await ctx.db.patch(table._id, { status: args.status });
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// Inventory (admin-only stock tracking)
+// ─────────────────────────────────────────────────────
+
+export const listInventory = query({
+  args: {},
+  handler: async (ctx) => {
+    await assertAdmin(ctx);
+    return await ctx.db.query("inventory").collect();
+  },
+});
+
+export const saveInventoryItem = mutation({
+  args: {
+    id: v.optional(v.id("inventory")),
+    name: v.string(),
+    unit: v.string(),
+    quantity: v.number(),
+    lowStockAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const name = args.name.trim();
+    if (name.length < 2 || name.length > 80) {
+      throw new Error("Item name must be 2–80 characters.");
+    }
+    if (!Number.isFinite(args.quantity) || args.quantity < 0) {
+      throw new Error("Stock cannot be negative.");
+    }
+    if (!Number.isFinite(args.lowStockAt) || args.lowStockAt < 0) {
+      throw new Error("Low-stock threshold cannot be negative.");
+    }
+    const unit = args.unit.trim() || "units";
+    const now = Date.now();
+    if (args.id) {
+      const existing = await ctx.db.get(args.id);
+      if (!existing) throw new Error("Inventory item not found.");
+      await ctx.db.patch(args.id, {
+        name,
+        unit,
+        quantity: args.quantity,
+        lowStockAt: args.lowStockAt,
+        updatedAt: now,
+      });
+      return args.id;
+    }
+    const duplicate = await ctx.db
+      .query("inventory")
+      .withIndex("by_name", (q) => q.eq("name", name))
+      .first();
+    if (duplicate) {
+      throw new Error(`"${name}" is already in your inventory — edit it instead.`);
+    }
+    return await ctx.db.insert("inventory", {
+      name,
+      unit,
+      quantity: args.quantity,
+      lowStockAt: args.lowStockAt,
+      updatedAt: now,
+    });
+  },
+});
+
+/** Quick +/- stock adjustment from the inventory table. */
+export const adjustInventoryStock = mutation({
+  args: { id: v.id("inventory"), delta: v.number() },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const item = await ctx.db.get(args.id);
+    if (!item) throw new Error("Inventory item not found.");
+    const next = Math.max(0, (item.quantity ?? 0) + args.delta);
+    await ctx.db.patch(args.id, { quantity: next, updatedAt: Date.now() });
+    return next;
+  },
+});
+
+export const deleteInventoryItem = mutation({
+  args: { id: v.id("inventory") },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const item = await ctx.db.get(args.id);
+    if (item) await ctx.db.delete(args.id);
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// Reservations
+// ─────────────────────────────────────────────────────
+
+const reservationStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("confirmed"),
+  v.literal("completed"),
+  v.literal("cancelled"),
+);
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PHONE_RE = /^[+0-9][0-9 +()-]{6,19}$/;
+
+/** Normalised phone for duplicate comparisons (spaces/dashes ignored). */
+function normalizePhone(p: string) {
+  return p.replace(/[\s()-]/g, "");
+}
+
+/**
+ * Public booking endpoint. Validates every field server-side and blocks
+ * obvious duplicate/conflicting bookings: the same phone cannot hold the
+ * same slot twice, and a slot rejects bookings that would exceed the café's
+ * seating capacity.
+ */
+export const createReservation = mutation({
+  args: {
+    name: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+    guests: v.number(),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    const phone = args.phone.trim();
+    const email = args.email?.trim() || undefined;
+    const notes = args.notes?.trim() || undefined;
+
+    if (name.length < 2 || name.length > 80) {
+      throw new Error("Please enter your name (2–80 characters).");
+    }
+    if (!PHONE_RE.test(phone)) {
+      throw new Error("Please enter a valid phone number.");
+    }
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      throw new Error("Please enter a valid email address.");
+    }
+    if (!DATE_RE.test(args.date)) {
+      throw new Error("Please choose a valid date.");
+    }
+    const day = new Date(`${args.date}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(day.getTime())) {
+      throw new Error("Please choose a valid date.");
+    }
+    // Allow same-day bookings (guests often reserve for the evening).
+    if (day.getTime() < today.getTime()) {
+      throw new Error("Please choose today or a future date.");
+    }
+    if (!TIME_RE.test(args.time)) {
+      throw new Error("Please choose a valid time.");
+    }
+    if (!Number.isFinite(args.guests) || args.guests < 1 || args.guests > 20) {
+      throw new Error("Party size must be between 1 and 20 guests.");
+    }
+
+    // Existing active bookings for that day.
+    const dayBookings = await ctx.db
+      .query("reservations")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .collect();
+    const active = dayBookings.filter(
+      (r) => r.status === "pending" || r.status === "confirmed",
+    );
+
+    // Obvious duplicate: same phone, same date, same slot.
+    const normalized = normalizePhone(phone);
+    if (
+      active.some(
+        (r) => normalizePhone(r.phone) === normalized && r.time === args.time,
+      )
+    ) {
+      throw new Error(
+        "You already have a reservation for this slot. Call us if you need to change it.",
+      );
+    }
+
+    // Conflict check: don't overbook a slot beyond seating capacity.
+    const tables = await ctx.db.query("tables").collect();
+    const capacity = tables.length
+      ? tables.reduce((sum, t) => sum + t.capacity, 0)
+      : 30;
+    const bookedForSlot = active
+      .filter((r) => r.time === args.time)
+      .reduce((sum, r) => sum + r.guests, 0);
+    if (bookedForSlot + args.guests > capacity) {
+      throw new Error(
+        "That time slot is fully booked — please pick another time or call us.",
+      );
+    }
+
+    const userId = await getAuthUserId(ctx);
+    const now = Date.now();
+    return await ctx.db.insert("reservations", {
+      name,
+      phone,
+      email,
+      date: args.date,
+      time: args.time,
+      guests: args.guests,
+      notes: notes ? notes.slice(0, 500) : undefined,
+      status: "pending",
+      userId: userId ?? undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+/** Admin-only list of every reservation (client sorts for its views). */
+export const listReservations = query({
+  args: {},
+  handler: async (ctx) => {
+    await assertAdmin(ctx);
+    return await ctx.db.query("reservations").collect();
+  },
+});
+
+/** Admin-only status change: confirm / complete / cancel a booking. */
+export const updateReservationStatus = mutation({
+  args: {
+    id: v.id("reservations"),
+    status: reservationStatusValidator,
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const reservation = await ctx.db.get(args.id);
+    if (!reservation) throw new Error("Reservation not found.");
+    await ctx.db.patch(args.id, { status: args.status, updatedAt: Date.now() });
   },
 });
 

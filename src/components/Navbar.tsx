@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList } from "lucide-react";
+import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList, CalendarDays } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.svg";
@@ -10,6 +10,7 @@ const navLinks = [
   { to: "/", label: "Home", icon: Home },
   { to: "/menu", label: "Menu", icon: Coffee },
   { to: "/orders", label: "Orders", icon: ClipboardList },
+  { to: "/reservations", label: "Reserve", icon: CalendarDays },
   { to: "/offers", label: "Offers", icon: Tag },
   { to: "/about", label: "About", icon: Info },
   { to: "/contact", label: "Contact", icon: Phone },

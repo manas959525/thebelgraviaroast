@@ -25,6 +25,7 @@ const CustomerOrders = lazy(() => import("./pages/CustomerOrders.tsx"));
 const About = lazy(() => import("./pages/About.tsx"));
 const Offers = lazy(() => import("./pages/Offers.tsx"));
 const Contact = lazy(() => import("./pages/Contact.tsx"));
+const ReservationsPage = lazy(() => import("./pages/Reservations.tsx"));
 const TableOrdering = lazy(() => import("./pages/TableOrdering.tsx"));
 const BuildYourDrink = lazy(() => import("./pages/BuildYourDrink.tsx"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
@@ -167,6 +168,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/about" element={<About />} />
               <Route path="/offers" element={<Offers />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/table-ordering" element={<TableOrdering />} />
               <Route path="/build-your-drink" element={<BuildYourDrink />} />
 

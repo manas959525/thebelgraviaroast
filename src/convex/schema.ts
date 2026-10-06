@@ -175,11 +175,79 @@ const schema = defineSchema(
       note: v.optional(v.string()),
     }).index("by_product", ["productId"]),
 
+    // Admin edits to static-catalog products (name/description/price/image,
+    // or a soft-remove via `hidden`). Absent row = use the static catalog.
+    productOverrides: defineTable({
+      productId: v.string(),
+      name: v.optional(v.string()),
+      description: v.optional(v.string()),
+      price: v.optional(v.number()),
+      image: v.optional(v.string()),
+      isVeg: v.optional(v.boolean()),
+      hidden: v.optional(v.boolean()),
+      updatedAt: v.number(),
+    }).index("by_product", ["productId"]),
+
+    // Items added by the admin that are not part of the static catalog.
+    customProducts: defineTable({
+      productId: v.string(),
+      slug: v.string(),
+      name: v.string(),
+      description: v.string(),
+      price: v.number(),
+      image: v.string(),
+      category: v.string(),
+      isVeg: v.boolean(),
+      rating: v.number(),
+      prepTime: v.number(),
+      calories: v.optional(v.number()),
+      tags: v.array(v.string()),
+      available: v.boolean(),
+      updatedAt: v.number(),
+    })
+      .index("by_productId", ["productId"])
+      .index("by_slug", ["slug"]),
+
     // Simple key/value café settings (name, phone, UPI id, tax rate, hours…).
     settings: defineTable({
       key: v.string(),
       value: v.string(),
     }).index("by_key", ["key"]),
+
+    // Table reservations made from the public Reservations page.
+    reservations: defineTable({
+      name: v.string(),
+      phone: v.string(),
+      email: v.optional(v.string()),
+      // Calendar day as YYYY-MM-DD (local café time).
+      date: v.string(),
+      // 24h HH:MM slot, e.g. "19:30".
+      time: v.string(),
+      guests: v.number(),
+      notes: v.optional(v.string()),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("confirmed"),
+        v.literal("completed"),
+        v.literal("cancelled"),
+      ),
+      userId: v.optional(v.id("users")),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_date", ["date"])
+      .index("by_status", ["status"])
+      .index("by_phone", ["phone"]),
+
+    // Inventory tracking for the admin dashboard (ingredients / supplies).
+    inventory: defineTable({
+      name: v.string(),
+      unit: v.string(),
+      quantity: v.number(),
+      lowStockAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_name", ["name"]),
 
     // Customer reviews; only approved ones show on the landing page.
     reviews: defineTable({

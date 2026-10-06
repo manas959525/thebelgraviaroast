@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { AssistantView } from "./admin/AssistantView";
+import { ReservationsView } from "./admin/ReservationsView";
+import { InventoryView } from "./admin/InventoryView";
 import {
   LayoutDashboard, Coffee, ShoppingBag, Tag, BarChart3,
   Settings, TrendingUp, DollarSign, Package,
@@ -8,11 +10,12 @@ import {
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
   Power, PowerOff, ChefHat, ExternalLink, Bot, ShieldCheck,
+  CalendarCheck, Archive,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
-import { categories, products as staticProducts } from "@/data/menu";
+import { categories, products as staticProducts, type Product } from "@/data/menu";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
@@ -26,7 +29,9 @@ type AdminSection =
   | "categories"
   | "tables"
   | "orders"
+  | "reservations"
   | "payments"
+  | "inventory"
   | "offers"
   | "analytics"
   | "assistant"
@@ -40,7 +45,9 @@ const sidebarItems: { id: AdminSection; label: string; icon: typeof LayoutDashbo
   { id: "products", label: "Products", icon: Package },
   { id: "categories", label: "Categories", icon: Grid3X3 },
   { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "reservations", label: "Reservations", icon: CalendarCheck },
   { id: "payments", label: "Payments", icon: DollarSign },
+  { id: "inventory", label: "Inventory", icon: Archive },
   { id: "tables", label: "Tables", icon: Calendar },
   { id: "qr-generator", label: "QR Generator", icon: QrCode },
   { id: "offers", label: "Offers & Coupons", icon: Tag },
@@ -96,22 +103,32 @@ function DashboardView() {
   const convexOrders = useQuery(api.cafe.listOrders);
   const convexPayments = useQuery(api.cafe.listPayments);
   const convexRequests = useQuery(api.cafe.listServiceRequests);
+  const convexReservations = useQuery(api.cafe.listReservations);
   const convexAdvance = useMutation(api.cafe.updateOrderStatus);
   const convexResolve = useMutation(api.cafe.resolveServiceRequest);
 
   const orders = convexOrders ?? [];
   const payments = convexPayments ?? [];
   const serviceRequests = convexRequests ?? [];
+  const reservations = convexReservations ?? [];
 
   const verifiedToday = payments.filter((p) => p.status === "verified" && p.verifiedAt && p.verifiedAt > Date.now() - 86400000);
   const revenueToday = verifiedToday.reduce((sum, p) => sum + p.amount, 0);
   const ordersToday = orders.filter((o) => o._creationTime > Date.now() - 86400000).length;
   const avgOrder = orders.length ? Math.round(orders.reduce((sum, o) => sum + o.total, 0) / orders.length) : 0;
   const pendingVerifications = payments.filter((p) => p.status === "pending_verification").length;
+  const pendingOrders = orders.filter((o) => o.status === "pending" || o.status === "confirmed").length;
+  const completedToday = orders.filter((o) => o.status === "delivered" && o._creationTime > Date.now() - 86400000).length;
+  const nowDate = new Date();
+  const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}-${String(nowDate.getDate()).padStart(2, "0")}`;
+  const reservationsToday = reservations.filter((r) => r.date === todayKey).length;
 
   const stats = [
     { label: "Today's Revenue", value: revenueToday > 0 ? `₹${revenueToday.toLocaleString("en-IN")}` : "₹0", change: `${ordersToday} order${ordersToday === 1 ? "" : "s"} today`, icon: DollarSign, color: "text-sage" },
     { label: "Orders Today", value: `${ordersToday}`, change: "live", icon: ShoppingBag, color: "text-gold" },
+    { label: "Today's Reservations", value: `${reservationsToday}`, change: reservationsToday > 0 ? "booked today" : "none yet", icon: CalendarCheck, color: "text-dusty-rose" },
+    { label: "Pending Orders", value: `${pendingOrders}`, change: pendingOrders > 0 ? "in queue" : "all clear", icon: Bell, color: "text-amber-500" },
+    { label: "Completed Orders", value: `${completedToday}`, change: "today", icon: CheckCheck, color: "text-sage" },
     { label: "Avg. Order Value", value: `₹${avgOrder}`, change: `${orders.length} total orders`, icon: TrendingUp, color: "text-blue-500" },
     { label: "Pending Verifications", value: `${pendingVerifications}`, change: pendingVerifications > 0 ? "needs review" : "all clear", icon: Calendar, color: "text-purple-500" },
   ];
@@ -338,25 +355,91 @@ function DashboardView() {
 function ProductsView() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
+  const [showHidden, setShowHidden] = useState(false);
   const flagsQuery = useQuery(api.cafe.listProductFlags);
+  const overridesQuery = useQuery(api.cafe.listProductOverrides);
+  const customQuery = useQuery(api.cafe.listCustomProducts);
   const setAvailability = useMutation(api.cafe.setProductAvailability);
+  const saveOverride = useMutation(api.cafe.saveProductOverride);
+  const clearOverride = useMutation(api.cafe.clearProductOverride);
+  const addCustom = useMutation(api.cafe.addCustomProduct);
+  const updateCustom = useMutation(api.cafe.updateCustomProduct);
+  const deleteCustom = useMutation(api.cafe.deleteCustomProduct);
+
+  // Add / edit item editor
+  const [editor, setEditor] = useState<{ kind: "add" | "static" | "custom"; productId?: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const emptyForm = {
+    name: "",
+    description: "",
+    price: "",
+    image: "",
+    category: categories[0]?.id ?? "cat-coffee",
+    isVeg: "true",
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  // Merged catalogue rows: static items (with admin edits) + admin-added items.
+  type Row = { p: Product; isCustom: boolean; hidden: boolean };
+  const overrideMap = new Map((overridesQuery ?? []).map((o) => [o.productId, o]));
+  const rows: Row[] = [
+    ...staticProducts.map((p) => {
+      const o = overrideMap.get(p.id);
+      const priceEdited = typeof o?.price === "number" && o.price > 0;
+      const merged: Product = {
+        ...p,
+        name: o?.name?.trim() || p.name,
+        description: o?.description?.trim() || p.description,
+        price: priceEdited ? (o!.price as number) : p.price,
+        image: o?.image?.trim() || p.image,
+        isVeg: o?.isVeg ?? p.isVeg,
+      };
+      if (priceEdited) delete merged.discountPrice;
+      return { p: merged, isCustom: false, hidden: !!o?.hidden };
+    }),
+    ...(customQuery ?? []).map(
+      (c): Row => ({
+        p: {
+          id: c.productId,
+          slug: c.slug,
+          name: c.name,
+          description: c.description,
+          price: c.price,
+          image: c.image,
+          category: c.category,
+          isVeg: c.isVeg,
+          rating: c.rating,
+          prepTime: c.prepTime,
+          calories: c.calories,
+          available: c.available,
+          tags: c.tags,
+        },
+        isCustom: true,
+        hidden: false,
+      }),
+    ),
+  ];
 
   // DB availability overrides win over the static catalog flag.
   const flagMap = new Map((flagsQuery ?? []).map((f) => [f.productId, f.available]));
-  const effective = (id: string) => flagMap.get(id) ?? staticProducts.find((p) => p.id === id)?.available ?? true;
+  const availableMap = new Map(rows.map((r) => [r.p.id, r.p.available]));
+  const effective = (id: string) => flagMap.get(id) ?? availableMap.get(id) ?? true;
 
-  const filtered = staticProducts.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (categories.find((c) => c.id === p.category)?.name.toLowerCase().includes(search.toLowerCase()) ?? false),
+  const filtered = rows.filter(
+    (r) =>
+      (showHidden || !r.hidden) &&
+      (r.p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (categories.find((c) => c.id === r.p.category)?.name.toLowerCase().includes(search.toLowerCase()) ?? false)),
   );
+
+  const hiddenCount = rows.filter((r) => r.hidden).length;
+  const catalogueCount = rows.filter((r) => !r.hidden).length;
+  const soldOutCount = rows.filter((r) => !r.hidden && !effective(r.p.id)).length;
 
   const toggle = (id: string, name: string, next: boolean) => {
     void setAvailability({ productId: id, available: next, note: next ? undefined : "Marked sold out by staff" });
     toast.success(next ? `${name} is back on the menu` : `${name} marked sold out`);
   };
-
-  const soldOutCount = staticProducts.filter((p) => !effective(p.id)).length;
 
   const StatusChip = ({ id }: { id: string }) => (
     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${effective(id) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
@@ -391,36 +474,296 @@ function ProductsView() {
     </div>
   );
 
+  // ── Add / edit / remove handlers (Menu Management CRUD) ──
+  const openAdd = () => {
+    setForm(emptyForm);
+    setEditor({ kind: "add" });
+  };
+
+  const openEdit = (row: Row) => {
+    setForm({
+      name: row.p.name,
+      description: row.p.description,
+      price: String(row.p.discountPrice ?? row.p.price),
+      image: row.p.image,
+      category: row.p.category,
+      isVeg: String(row.p.isVeg),
+    });
+    setEditor({ kind: row.isCustom ? "custom" : "static", productId: row.p.id });
+  };
+
+  const saveEditor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editor) return;
+    const name = form.name.trim();
+    const description = form.description.trim();
+    const price = Number(form.price);
+    const image = form.image.trim();
+    if (name.length < 2) {
+      toast.error("Give the item a name (2+ characters)");
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error("Price must be greater than zero");
+      return;
+    }
+    if (editor.kind === "add" && !image) {
+      toast.error("Add an image URL for the new item");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editor.kind === "add") {
+        await addCustom({
+          name,
+          description: description || name,
+          price,
+          image,
+          category: form.category,
+          isVeg: form.isVeg === "true",
+        });
+        toast.success(`${name} added to the menu`);
+      } else if (editor.kind === "static") {
+        await saveOverride({
+          productId: editor.productId!,
+          name,
+          description: description || undefined,
+          price,
+          image: image || undefined,
+          isVeg: form.isVeg === "true",
+        });
+        toast.success(`${name} updated — live across the menu`);
+      } else {
+        await updateCustom({
+          productId: editor.productId!,
+          name,
+          description: description || undefined,
+          price,
+          image: image || undefined,
+          category: form.category,
+          isVeg: form.isVeg === "true",
+        });
+        toast.success(`${name} updated`);
+      }
+      setEditor(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save the item");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetToOriginal = (row: Row) => {
+    void clearOverride({ productId: row.p.id })
+      .then(() => toast.success(`${row.p.name} reset to the original catalog item`))
+      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Could not reset"));
+  };
+
+  const restoreRow = (row: Row) => {
+    void saveOverride({ productId: row.p.id, hidden: false })
+      .then(() => toast.success(`${row.p.name} is back on the menu`))
+      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Could not restore"));
+  };
+
+  const removeRow = (row: Row) => {
+    if (row.isCustom) {
+      void deleteCustom({ productId: row.p.id })
+        .then(() => toast.success(`${row.p.name} deleted from the catalogue`))
+        .catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Could not delete"));
+    } else {
+      void saveOverride({ productId: row.p.id, hidden: true })
+        .then(() =>
+          toast.success(`${row.p.name} removed from the menu`, {
+            action: {
+              label: "Undo",
+              onClick: () => {
+                void saveOverride({ productId: row.p.id, hidden: false });
+              },
+            },
+          }),
+        )
+        .catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Could not remove"));
+    }
+  };
+
+  const RowActions = ({ row }: { row: Row }) => (
+    <div className="flex flex-wrap items-center gap-1">
+      <ToggleButtons p={row.p} />
+      <button
+        onClick={() => openEdit(row)}
+        className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-gold hover:bg-gold/10 transition-all"
+      >
+        <Edit className="h-3 w-3" /> Edit
+      </button>
+      {row.hidden ? (
+        <button
+          onClick={() => restoreRow(row)}
+          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-blue-600 hover:bg-blue-50 transition-all"
+        >
+          Restore
+        </button>
+      ) : (
+        <button
+          onClick={() => removeRow(row)}
+          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all"
+        >
+          <Trash2 className="h-3 w-3" /> {row.isCustom ? "Delete" : "Remove"}
+        </button>
+      )}
+    </div>
+  );
+
+  const inputClass = "w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Products & Availability</h2>
           <p className="text-sm text-muted-foreground">
-            {staticProducts.length} items in catalogue · {soldOutCount} sold out · changes reach every menu instantly
+            {catalogueCount} items in catalogue · {soldOutCount} sold out{hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""} · changes reach every menu instantly
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1.5 bg-gold text-white px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-gold/90 transition-all shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Item
+          </button>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products..."
-              className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-gold w-56"
+              className="pl-9 pr-4 py-2 rounded-xl border border-border text-sm outline-none focus:border-gold w-40 sm:w-56"
             />
           </div>
           <div className="flex border border-border rounded-lg overflow-hidden">
             <button onClick={() => setView("grid")} className={`p-2 ${view === "grid" ? "bg-gold text-white" : "bg-white"}`}><Grid3X3 className="h-4 w-4" /></button>
             <button onClick={() => setView("list")} className={`p-2 ${view === "list" ? "bg-gold text-white" : "bg-white"}`}><List className="h-4 w-4" /></button>
           </div>
+          {hiddenCount > 0 && (
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className={`shrink-0 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                showHidden ? "border-border bg-muted text-foreground" : "border-dashed border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Hidden ({hiddenCount})
+            </button>
+          )}
         </div>
       </div>
 
+      {editor && (
+        <form
+          onSubmit={saveEditor}
+          className="glass-elevated rounded-2xl border-0 p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end"
+        >
+          <div className="lg:col-span-2">
+            <label className="text-xs font-medium block mb-1">Item name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className={inputClass}
+              required
+            />
+          </div>
+          <div className="lg:col-span-2">
+            <label className="text-xs font-medium block mb-1">Description</label>
+            <input
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Price (₹)</label>
+            <input
+              type="number"
+              min={1}
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              className={inputClass}
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Type</label>
+            <select
+              value={form.isVeg}
+              onChange={(e) => setForm({ ...form, isVeg: e.target.value })}
+              className={inputClass}
+            >
+              <option value="true">🟢 Vegetarian</option>
+              <option value="false">🔴 Non-Veg</option>
+            </select>
+          </div>
+          <div className="lg:col-span-3">
+            <label className="text-xs font-medium block mb-1">Image URL</label>
+            <input
+              value={form.image}
+              onChange={(e) => setForm({ ...form, image: e.target.value })}
+              placeholder="https://…"
+              className={inputClass}
+            />
+          </div>
+          {editor.kind !== "static" && (
+            <div className="lg:col-span-2">
+              <label className="text-xs font-medium block mb-1">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={inputClass}
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="lg:col-span-6 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setEditor(null)}
+              className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-all"
+            >
+              Cancel
+            </button>
+            {editor.kind === "static" && editor.productId && (
+              <button
+                type="button"
+                onClick={() => {
+                  const row = rows.find((r) => r.p.id === editor.productId);
+                  if (row) resetToOriginal(row);
+                }}
+                className="px-4 py-2 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-all"
+              >
+                Reset to original
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 rounded-xl bg-gold text-white text-sm font-semibold hover:bg-gold/90 transition-all disabled:opacity-60"
+            >
+              {saving ? "Saving…" : editor.kind === "add" ? "Add Item" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      )}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((p) => (
+          {filtered.map((row) => {
+            const p = row.p;
+            return (
             <div key={p.id} className="glass-elevated rounded-2xl border-0 overflow-hidden group">
               <div className="relative h-40 overflow-hidden">
                 <img src={p.image} alt={p.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${!effective(p.id) ? "grayscale" : ""}`} />
@@ -431,18 +774,24 @@ function ProductsView() {
                 )}
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-sm">{p.name}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm">{p.name}</h3>
+                  {row.hidden && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">Hidden</span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.description}</p>
                 <div className="flex items-center justify-between mt-3">
                   <span className="font-bold">₹{p.discountPrice ?? p.price}</span>
                   <StatusChip id={p.id} />
                 </div>
                 <div className="mt-3">
-                  <ToggleButtons p={p} />
+                  <RowActions row={row} />
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
@@ -457,21 +806,29 @@ function ProductsView() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
+              {filtered.map((row) => {
+                const p = row.p;
+                return (
                 <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3 flex items-center gap-3">
                     <img src={p.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                     <div>
-                      <div className="font-medium">{p.name}</div>
+                      <div className="font-medium">
+                        {p.name}
+                        {row.hidden && (
+                          <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground align-middle">Hidden</span>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground">{p.isVeg ? "🟢 Veg" : "🔴 Non-Veg"}</div>
                     </div>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{categories.find((c) => c.id === p.category)?.name}</td>
                   <td className="px-5 py-3 font-medium">₹{p.discountPrice ?? p.price}</td>
                   <td className="px-5 py-3"><StatusChip id={p.id} /></td>
-                  <td className="px-5 py-3"><ToggleButtons p={p} /></td>
+                  <td className="px-5 py-3"><RowActions row={row} /></td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -520,6 +877,17 @@ function OrdersView() {
   const orders = convexOrders ?? [];
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
+  // Customer-friendly lifecycle labels (raw statuses stay unchanged in the DB).
+  const statusLabel: Record<string, string> = {
+    all: "All",
+    pending: "New",
+    confirmed: "Accepted",
+    preparing: "Preparing",
+    ready: "Ready",
+    delivered: "Completed",
+    cancelled: "Cancelled",
+  };
+
   const advance = (id: string, status: string) => {
     const order = orders.find((o) => o._id === id);
     if (!order) return;
@@ -553,7 +921,7 @@ function OrdersView() {
               filter === f ? "bg-gold text-white" : "glass-chip text-muted-foreground"
             }`}
           >
-            {f}
+            {statusLabel[f] ?? f}
           </button>
         ))}
       </div>
@@ -1319,6 +1687,7 @@ function SettingsView() {
     { key: "email", label: "Email" },
     { key: "address", label: "Address", wide: true },
     { key: "upiId", label: "UPI ID", hint: "Used for the payment QR and UPI deep links" },
+    { key: "paymentGateway", label: "Payment Gateway", hint: "Config point: leave blank until a gateway (Razorpay/Cashfree/Stripe) is wired up — online card payments stay disabled until then" },
     { key: "taxRate", label: "Tax Rate (%)", hint: "Applied at checkout" },
     { key: "openTime", label: "Opens At" },
     { key: "closeTime", label: "Closes At" },
@@ -1421,7 +1790,9 @@ export default function AdminDashboardPage() {
       case "products": return <ProductsView />;
       case "categories": return <CategoriesView />;
       case "orders": return <OrdersView />;
+      case "reservations": return <ReservationsView />;
       case "payments": return <PaymentsView />;
+      case "inventory": return <InventoryView />;
       case "tables": return <TablesView />;
       case "qr-generator": return <QRGeneratorView />;
       case "offers": return <OffersView />;

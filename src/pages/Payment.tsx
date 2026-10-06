@@ -11,6 +11,25 @@ import { toast } from "sonner";
 
 type PaymentStatus = "idle" | "initiated" | "verification_pending";
 
+/*
+ * ── PAYMENT GATEWAY CONFIGURATION (intentionally not activated) ──
+ * No online payment gateway is configured for this deployment, so nothing on
+ * this page ever reports a false "Payment Successful" state:
+ *  - UPI   → customer pays the café's real UPI ID (manual UTR + admin verify),
+ *  - Card  → clearly marked unavailable online; recorded as pay-at-counter,
+ *  - Cash  → settled at the café.
+ * To activate a real gateway later (Razorpay, Cashfree, Stripe, …):
+ *  1. Add the publishable key to the project's Keys/API keys tab
+ *     (e.g. VITE_RAZORPAY_KEY_ID) and the secret to the Convex environment
+ *     (dashboard → Settings → Environment Variables) — never hard-code them.
+ *  2. Create a Convex action that creates the gateway order/checkout session
+ *     and a webhook/verify action that flips payments.status to "verified"
+ *     ONLY after the gateway confirms the signature (see cafe.ts
+ *     verifyPayment, which the admin uses for manual UTR verification today).
+ *  3. Swap the card option below from "pay at counter" to that flow.
+ * Until those steps are done, keep the online-card option disabled.
+ */
+
 const DEFAULT_UPI_ID = "7728059988@ptyes";
 const DEFAULT_CAFÉ_NAME = "THE BELGRAVIA ROAST";
 
@@ -163,8 +182,17 @@ export default function PaymentPage() {
       db = await placeOrder(orderData);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Server-side re-pricing / stock mismatches send the customer back to review.
-      if (msg.includes("total changed") || msg.includes("no longer on the menu") || msg.includes("cart is empty")) {
+      // Server-side validation (re-pricing, stock, hidden items) sends the
+      // customer back to review instead of pretending the order went through.
+      const serverRejection = [
+        "total changed",
+        "no longer on the menu",
+        "cart is empty",
+        "has just sold out",
+        "Invalid quantity",
+        "Too many items",
+      ].some((s) => msg.includes(s));
+      if (serverRejection) {
         toast.error(msg);
         navigate("/cart", { replace: true });
         return;

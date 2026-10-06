@@ -73,10 +73,11 @@ function PerfectWith({ product }: { product: ReturnType<typeof getProductBySlug>
 
 export default function ProductDetail() {
   const { slug } = useParams();
-  const { isAvailable } = useProductsWithFlags();
-  const staticProduct = getProductBySlug(slug || "");
-  const product = staticProduct
-    ? { ...staticProduct, available: isAvailable(staticProduct.id) }
+  const { allProducts, isAvailable } = useProductsWithFlags();
+  // Merged catalog: static items + admin edits + admin-added items.
+  const matchedProduct = allProducts.find((p) => p.slug === slug);
+  const product = matchedProduct
+    ? { ...matchedProduct, available: isAvailable(matchedProduct.id) }
     : null;
 
   const [quantity, setQuantity] = useState(1);

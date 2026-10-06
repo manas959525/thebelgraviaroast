@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { categories, type Product } from "@/data/menu";
 import { useProductsWithFlags } from "@/lib/use-live-catalog";
-import { addToCart } from "@/lib/cart";
+import { addToCart, updateQuantity, useCart } from "@/lib/cart";
 import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks } from "@/lib/cafe";
 import { isFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
 import VoiceOrder from "@/components/VoiceOrder";
@@ -43,12 +43,26 @@ function FavoriteButton({ product }: { product: Product }) {
 }
 
 function MenuCard({ product, index }: { product: Product; index: number }) {
+  const { items } = useCart();
+  const cartIndex = items.findIndex((i) => i.product.id === product.id);
+  const inCartQty = cartIndex >= 0 ? items[cartIndex].quantity : 0;
+
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!product.available) return;
     addToCart(product, 1);
     toast.success(`${product.name} added to cart`);
+  };
+
+  // Quantity controls for items already in the cart (mirrors the cart stepper).
+  const handleStep = (e: React.MouseEvent, delta: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!product.available) return;
+    const idx = items.findIndex((i) => i.product.id === product.id);
+    if (idx === -1) return;
+    updateQuantity(idx, items[idx].quantity + delta);
   };
 
   return (
@@ -137,13 +151,34 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                 <Clock className="h-3 w-3" /> {product.prepTime} min
               </span>
               <FavoriteButton product={product} />
-              <button
-                onClick={handleAdd}
-                disabled={!product.available}
-                className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all hover:shadow-md shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                +
-              </button>
+              {inCartQty > 0 ? (
+                <div className="h-8 flex items-center gap-0.5 rounded-xl border border-gold/30 bg-gold/10 px-0.5 shrink-0">
+                  <button
+                    onClick={(e) => handleStep(e, -1)}
+                    aria-label={`Decrease ${product.name} quantity`}
+                    className="h-7 w-6 rounded-lg text-gold font-bold hover:bg-gold/20 transition-all flex items-center justify-center"
+                  >
+                    −
+                  </button>
+                  <span className="text-xs font-bold text-gold w-4 text-center tabular-nums">{inCartQty}</span>
+                  <button
+                    onClick={(e) => handleStep(e, 1)}
+                    aria-label={`Increase ${product.name} quantity`}
+                    className="h-7 w-6 rounded-lg bg-gold text-white font-bold hover:bg-gold/90 transition-all flex items-center justify-center"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAdd}
+                  disabled={!product.available}
+                  aria-label={`Add ${product.name} to cart`}
+                  className="h-8 w-8 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all hover:shadow-md shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              )}
             </div>
           </div>
         </div>
