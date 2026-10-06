@@ -2,11 +2,6 @@ import { action } from "../_generated/server";
 import { v } from "convex/values";
 import { products } from "../../data/menu";
 import {
-  MENU_SNIPPET,
-  CATEGORY_SNIPPET,
-  FAQ_SNIPPET,
-  BUSINESS_SNIPPET,
-  PAGE_SNIPPET,
   sanitize,
   looksLikeInjection,
   detectLanguage,
@@ -47,21 +42,6 @@ AVAILABLE ACTIONS: You can add items to the cart. When the guest clearly wants t
 CONTEXT-AWARENESS: The message includes a [PAGE: …] tag with the page the guest is on. Use it: on a product page, offer to tell them more about that item or compare it; on checkout, help them finish; on menu, suggest items from the page's category.
 
 REJECTIONS: If asked anything unrelated to the café (coding help, homework, etc.), politely decline in one sentence and steer back to how you can help with the café.`;
-
-const CONTEXT_HEADER = `BUSINESS CONTEXT:
-${BUSINESS_SNIPPET}
-
-MENU CONTEXT (available items, prices in ₹):
-${MENU_SNIPPET}
-
-CATEGORY CONTEXT:
-${CATEGORY_SNIPPET}
-
-FAQ:
-${FAQ_SNIPPET}
-
-NAVIGATION:
-${PAGE_SNIPPET}`;
 
 interface ChatMsgIn {
   role: "user" | "assistant";

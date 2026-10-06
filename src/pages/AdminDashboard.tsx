@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { AssistantView } from "./admin/AssistantView";
 import { ReservationsView } from "./admin/ReservationsView";
 import { InventoryView } from "./admin/InventoryView";
@@ -16,7 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
 import { categories, products as staticProducts, type Product } from "@/data/menu";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
 import { timeAgo, ORDER_STATUS_ORDER } from "@/lib/orders";
@@ -111,15 +111,18 @@ function DashboardView() {
   const payments = convexPayments ?? [];
   const serviceRequests = convexRequests ?? [];
   const reservations = convexReservations ?? [];
+  // Stable per-mount snapshot of "now": keeps the day-window stats consistent
+  // across re-renders and keeps render pure.
+  const [now] = useState(() => Date.now());
 
-  const verifiedToday = payments.filter((p) => p.status === "verified" && p.verifiedAt && p.verifiedAt > Date.now() - 86400000);
+  const verifiedToday = payments.filter((p) => p.status === "verified" && p.verifiedAt && p.verifiedAt > now - 86400000);
   const revenueToday = verifiedToday.reduce((sum, p) => sum + p.amount, 0);
-  const ordersToday = orders.filter((o) => o._creationTime > Date.now() - 86400000).length;
+  const ordersToday = orders.filter((o) => o._creationTime > now - 86400000).length;
   const avgOrder = orders.length ? Math.round(orders.reduce((sum, o) => sum + o.total, 0) / orders.length) : 0;
   const pendingVerifications = payments.filter((p) => p.status === "pending_verification").length;
   const pendingOrders = orders.filter((o) => o.status === "pending" || o.status === "confirmed").length;
-  const completedToday = orders.filter((o) => o.status === "delivered" && o._creationTime > Date.now() - 86400000).length;
-  const nowDate = new Date();
+  const completedToday = orders.filter((o) => o.status === "delivered" && o._creationTime > now - 86400000).length;
+  const nowDate = new Date(now);
   const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}-${String(nowDate.getDate()).padStart(2, "0")}`;
   const reservationsToday = reservations.filter((r) => r.date === todayKey).length;
 
@@ -144,7 +147,7 @@ function DashboardView() {
       table: o.tableNumber ?? "—",
     }));
 
-  const advance = async (id: string, status: BoardStatus) => {
+  const advance = async (id: string) => {
     const order = orders.find((o) => (o.orderNumber ?? o._id) === id);
     if (!order) return;
     const nextIndex = ORDER_STATUS_ORDER.indexOf(order.status) + 1;
@@ -234,7 +237,7 @@ function DashboardView() {
                           <span className="font-bold text-sm">₹{order.total}</span>
                           {col.key !== "ready" && (
                             <button
-                              onClick={() => advance(order.id, order.status)}
+                              onClick={() => advance(order.id)}
                               className="flex items-center gap-1 text-[10px] font-bold text-gold bg-gold/10 px-2 py-1 rounded-lg hover:bg-gold/20 transition-all"
                             >
                               <CheckCheck className="h-3 w-3" /> Advance
@@ -888,7 +891,7 @@ function OrdersView() {
     cancelled: "Cancelled",
   };
 
-  const advance = (id: string, status: string) => {
+  const advance = (id: string) => {
     const order = orders.find((o) => o._id === id);
     if (!order) return;
     const nextIndex = ORDER_STATUS_ORDER.indexOf(order.status) + 1;
@@ -958,7 +961,7 @@ function OrdersView() {
               {order.status !== "delivered" && order.status !== "cancelled" && (
                 <div className="flex gap-1 shrink-0">
                   <button
-                    onClick={() => advance(order._id, order.status)}
+                    onClick={() => advance(order._id)}
                     className="h-8 px-2.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold text-sage hover:bg-green-50 transition-all"
                   >
                     <CheckCircle className="h-3.5 w-3.5" /> {order.status === "ready" ? "Deliver" : "Advance"}
@@ -1615,7 +1618,8 @@ function AnalyticsView() {
   const payments = convexPayments ?? [];
 
   const verifiedTotal = payments.filter((p) => p.status === "verified").reduce((sum, p) => sum + p.amount, 0);
-  const weekStart = Date.now() - 7 * 86400000;
+  const [now] = useState(() => Date.now());
+  const weekStart = now - 7 * 86400000;
   const weeklyOrders = orders.filter((o) => o._creationTime > weekStart).length;
 
   // Aggregate quantities across every placed order for the true top sellers.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChefHat, Clock, Package, MapPin, ArrowRight, RotateCcw, ShieldCheck, Hourglass, Search, WifiOff } from "lucide-react";

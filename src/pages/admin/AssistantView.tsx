@@ -31,7 +31,9 @@ export function AssistantView() {
   }, [messages, busy]);
 
   const events = eventsQuery ?? [];
-  const now = Date.now();
+  // Snapshot of "now" for the whole mount: stable across re-renders (keeps the
+  // 24h window consistent) and keeps render pure.
+  const [now] = useState(() => Date.now());
   const last24h = events.filter((e) => now - e.createdAt < 86400000);
   const cartActions = events.filter((e) => e.kind === "chat_action_add_to_cart").length;
   const errors = events.filter((e) => e.kind === "chat_error").length;

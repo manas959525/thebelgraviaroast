@@ -10,18 +10,18 @@ import { QRCodeSVG } from "qrcode.react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CoffeeSpillScene, SteamWisp, FloatingBean } from "@/components/CoffeeSpillScene";
-import { getBestSellers, getSignature, getPopular, type Product } from "@/data/menu";
+import { getBestSellers, type Product } from "@/data/menu";
 import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart } from "@/lib/cart";
 import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks, getSurprise, getTodaySpecial, getTrending } from "@/lib/cafe";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
 // ── Order-mode helpers (shared with Checkout) ───────
-export const ORDER_MODE_KEY = "tbr-order-mode";
+const ORDER_MODE_KEY = "tbr-order-mode";
 
-export function chooseOrderMode(mode: "dine-in" | "takeaway" | "delivery") {
+function chooseOrderMode(mode: "dine-in" | "takeaway" | "delivery") {
   try {
     window.localStorage.setItem(ORDER_MODE_KEY, mode);
   } catch {

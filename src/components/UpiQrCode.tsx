@@ -9,7 +9,7 @@ const DEFAULT_CAFE_NAME = "THE BELGRAVIA ROAST";
  * (Paytm, PhonePe, GPay, BHIM, ...) opens a payment sheet for this
  * account, with the order amount and note pre-filled when available.
  */
-export function buildUpiUri(
+function buildUpiUri(
   opts: { amount?: number; orderId?: string; upiId?: string; cafeName?: string } = {},
 ) {
   const params = new URLSearchParams({

@@ -22,6 +22,24 @@ interface ParsedLine {
   quantity: number;
 }
 
+/** Minimal typings for the browser Web Speech API (avoids `any`). */
+interface SpeechRecognitionEventLike {
+  results?: { [index: number]: { [index: number]: { transcript?: string } } };
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((e: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
 }
@@ -84,12 +102,16 @@ export default function VoiceOrder({ variant = "button" }: { variant?: "button" 
     setTranscript("");
     setParsed([]);
     setListening(true);
-    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const speechWindow = window as unknown as {
+      webkitSpeechRecognition: SpeechRecognitionCtor;
+      SpeechRecognition: SpeechRecognitionCtor;
+    };
+    const SR = speechWindow.webkitSpeechRecognition || speechWindow.SpeechRecognition;
     const rec = new SR();
     rec.lang = "en-IN";
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-    rec.onresult = (e: any) => {
+    rec.onresult = (e) => {
       const text = e.results?.[0]?.[0]?.transcript ?? "";
       setTranscript(text);
       setParsed(parseUtterance(text));

@@ -66,7 +66,7 @@ export default function Kitchen() {
     counts[columnFor(o.status)] += 1;
   });
 
-  const advance = (id: string, status: string) => {
+  const advance = (id: string) => {
     const order = orders.find((o) => o._id === id);
     if (!order) return;
     const nextIndex = ORDER_STATUS_ORDER.indexOf(order.status) + 1;
@@ -218,7 +218,7 @@ export default function Kitchen() {
                             <div className="flex items-center justify-between gap-3">
                               <div className="text-lg font-bold">₹{order.total}</div>
                               <button
-                                onClick={() => advance(order._id, order.status)}
+                                onClick={() => advance(order._id)}
                                 className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
                                   isReady
                                     ? "bg-green-400 text-navy hover:bg-green-300"

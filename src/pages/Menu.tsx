@@ -8,7 +8,7 @@ import { categories, type Product } from "@/data/menu";
 import { useProductsWithFlags } from "@/lib/use-live-catalog";
 import { addToCart, updateQuantity, useCart } from "@/lib/cart";
 import { cravingChips, daypartGreeting, daypartHint, getDaypartPicks } from "@/lib/cafe";
-import { isFavorite, toggleFavorite, useFavorites } from "@/lib/favorites";
+import { toggleFavorite, useFavorites } from "@/lib/favorites";
 import VoiceOrder from "@/components/VoiceOrder";
 import { toast } from "sonner";
 

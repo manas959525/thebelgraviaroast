@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Coffee, Instagram, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import { Instagram, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";

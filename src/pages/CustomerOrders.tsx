@@ -37,7 +37,7 @@ export default function CustomerOrders() {
   const favs = useFavorites();
   const [tab, setTab] = useState<Tab>("orders");
   const { allProducts } = useProductsWithFlags();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Signed-in guests see their own order history from the café database
   // (server-scoped); guests fall back to orders placed on this device.

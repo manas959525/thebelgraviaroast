@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { CheckCircle, ArrowRight, Home, MapPin, Clock, Phone, RotateCcw, Printer, Receipt, ShieldCheck, Hourglass, Star, MessageSquareHeart } from "lucide-react";
@@ -67,11 +67,11 @@ export default function OrderConfirmation() {
   const orderId = state?.orderId || FALLBACK_ORDER_ID;
   const total = state?.total || 0;
   const items = state?.items || [];
-  const [saved, setSaved] = useState(false);
-
   // Persist to local order history exactly once (StrictMode-safe).
+  const savedRef = useRef(false);
   useEffect(() => {
-    if (saved || !state?.orderId) return;
+    if (savedRef.current || !state?.orderId) return;
+    savedRef.current = true;
     saveOrder({
       id: state.orderId,
       items: state.items || [],
@@ -84,11 +84,10 @@ export default function OrderConfirmation() {
       guestName: state.guestName,
       paymentMethod: state.paymentMethod,
       status: "pending" as OrderStatus,
-      placedAt: Date.now(),
+      placedAt: new Date().getTime(),
       etaMinutes: 12,
     });
-    setSaved(true);
-  }, [saved, state, total]);
+  }, [state, total]);
 
   const handleOrderAgain = () => {
     let added = 0;

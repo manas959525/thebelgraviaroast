@@ -110,7 +110,9 @@ export default function PaymentPage() {
   const [orderId] = useState(() => generateOrderId());
   const total = state?.grandTotal || 0;
   const submittingRef = useRef(false);
-  submittingRef.current = submitting;
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
 
   // No checkout data (e.g. direct visit after the receipt was cleared) — back to menu.
   useEffect(() => {
