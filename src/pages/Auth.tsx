@@ -14,9 +14,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-import { useAuth } from "@/hooks/use-auth";
-import {
-  ArrowRight,
+import { useAuth } from "@/hooks/use-auth";import { ArrowRight,
   Loader2,
   Mail,
   Phone,
@@ -25,7 +23,7 @@ import {
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import logo from "@/assets/logo.svg";
 
@@ -58,6 +56,7 @@ type Mode = "phone" | "email";
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, user, signIn } = useAuth();
   const claimAdminRole = useMutation(api.cafe.claimAdminRole);
+  const adminPhoneConfig = useQuery(api.cafe.adminPhoneConfig);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -196,8 +195,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <>
                 <CardHeader className="text-center">
                   <CardTitle className="text-xl">Welcome Back</CardTitle>
-                  <CardDescription>
-                    Sign in with your mobile number — we'll text you a code
+                  <CardDescription className="text-left">
+                    {adminPhoneConfig?.adminPhone
+                      ? `The Belgravia Roast is staff-only right now. Only the admin phone on file can sign in — if you need access, ask the owner to add your number in Settings. Admin phone: ${adminPhoneConfig.adminPhone.replace(/^(\d{1,3})(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3 $4").replace(/^(?:\+)?(\d{1,3})(\d{4,})$/, "$1 $2") || adminPhoneConfig.adminPhone}`
+                      : `Sign in with your mobile number — we'll text you a code`}
                   </CardDescription>
                 </CardHeader>
                 {mode === "phone" ? (

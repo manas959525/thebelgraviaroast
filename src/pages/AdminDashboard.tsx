@@ -2293,6 +2293,9 @@ function SettingsView() {
     { key: "ordersWhenClosed", label: "Orders While Closed", hint: "Config point: 'block' refuses orders outside opening hours; 'allow' accepts pre-orders (default)", options: ["allow", "block"] },
     { key: "newBadgeDays", label: "NEW Badge Duration (days)", hint: "How long new menu items keep their NEW badge (default 14)" },
     { key: "specialOverride", label: "Today's Special Override", hint: "Config point: product ID to pin as Today's Special — leave blank for the automatic daily pick" },
+    // ── Admin login config ──
+    { key: "adminPhone", label: "Admin Phone Numbers", hint: "Phone-number admin login: one or more numbers (comma-separated). Staff sign in with phone-OTP using a listed number to get admin access.", wide: true },
+    { key: "adminCaption", label: "Admin Login Caption (optional)", hint: "Shown on the auth page when admin phone login is configured, e.g. 'Staff only — ask your manager to add your number'" },
   ];
   const save = () => {
     if (!form) return;

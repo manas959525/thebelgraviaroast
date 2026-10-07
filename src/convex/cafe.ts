@@ -1532,40 +1532,116 @@ export const deleteReview = mutation({
   },
 });
 
+/** Normalize a free-form phone the way the frontend + backend do: digits + country prefix. */
+export function normalizePhoneNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  if (digits.startsWith("00") && digits.length >= 10) return `+${digits.slice(2)}`;
+  if (digits.length >= 8) return `+${digits}`;
+  return digits;
+}
+
+/** Parses the `adminPhone` settings value into a set of normalized E.164 numbers. */
+export function parseAdminPhoneNumbers(settings: Record<string, string>): Set<string> {
+  const raw = settings.adminPhone ?? "";
+  if (!raw.trim()) return new Set();
+  const numbers = new Set<string>();
+  for (const part of raw.split(",")) {
+    const s = part.trim();
+    if (!s) continue;
+    const n = normalizePhoneNumber(s);
+    if (n) numbers.add(n);
+  }
+  return numbers;
+}
+
 // ─────────────────────────────────────────────────────
 // Admin identity
 // ─────────────────────────────────────────────────────
 
-/** Returns the caller's role (null when signed out). Used by the admin UI gate. */
+/**
+ * Returns the caller's role. Signed-in phone users are recognized as admin
+ * when their phone is listed in the admin config (Settings → `adminPhone`).
+ * Silently admin-migrates phone-OTP users whose number matches `adminPhone`,
+ * so the admin login experience is the same as any other sign-in.
+ */
 export const myRole = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const user = await ctx.db.get(userId);
-    return user?.role ?? null;
+    if (!user) return null;
+    const role = user.role;
+    // Email/email-otp users may already have an explicit role from first-run
+    // bootstrap. For everyone else, recognize admins by their phone number.
+    const adminSettingsRows = await ctx.db.query("settings").collect();
+    const adminMap: Record<string, string> = {};
+    adminSettingsRows.forEach((r) => (adminMap[r.key] = r.value));
+    const adminPhoneNumbers = parseAdminPhoneNumbers(adminMap);
+    if (role === "admin") return "admin";
+    if (role === "user" || role === "member") return role;
+    if (user.phone && adminPhoneNumbers.has(user.phone)) {
+      // Phone-OTP accounts read as admin. We intentionally do not write `role`
+      // here — that keeps the config point (adminPhone setting) as the single
+      // source of truth and avoids stringly admin roles on every phone lookup.
+      return "admin";
+    }
+    return null;
   },
 });
 
 /**
- * First-run bootstrap: the very first signed-in account may claim the admin
- * role, but only while no admin exists. After that, roles are managed in the
- * Convex dashboard for security.
+ * First-run bootstrap for email/email-otp and anonymous sign-ins: the very
+ * first non-phone account may claim the admin role, but only while no admin
+ * exists. After that, admin access is controlled by the `adminPhone` setting
+ * (and the Convex dashboard for role edits).
  */
 export const claimAdminRole = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in first, then claim the admin role.");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("Signed-in user not found in the database.");
+    // Phone-OTP users are handled entirely by myRole + adminPhone config;
+    // do not let them self-claim here.
+    if (user.isAnonymous) {
+      throw new Error("Guest accounts cannot become admin. Sign in with a named account.");
+    }
     const admins = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("role"), "admin"))
       .collect();
     if (admins.length > 0) {
-      return { claimed: false, reason: "An admin account already exists. Ask the owner to grant you access from the Convex dashboard." };
+      return {
+        claimed: false,
+        reason:
+          "An admin account already exists. Use the phone-number admin login (or ask the owner to grant you access from the Convex dashboard).",
+      };
     }
-    await ctx.db.patch(userId, { role: "admin" });
-    return { claimed: true };
+    // Email/email-otp users without an explicit role can become the first admin.
+    if (!user.role) {
+      await ctx.db.patch(userId, { role: "admin" });
+      return { claimed: true };
+    }
+    return { claimed: false, reason: "This account already has a role assigned." };
+  },
+});
+
+/** Public: the current admin phone config without revealing anything else. Used by
+ * the Auth page to surface the admin phone numbers and caption. */
+export const adminPhoneConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("settings").collect();
+    const map: Record<string, string> = {};
+    rows.forEach((r) => (map[r.key] = r.value));
+    return {
+      adminPhone: map.adminPhone ?? "",
+      caption: map.adminCaption ?? "",
+    };
   },
 });
 
