@@ -34,6 +34,229 @@ function clampStr(s: string | undefined, max: number): string | undefined {
   return t ? t.slice(0, max) : undefined;
 }
 
+// ─────────────────────────────────────────────────────────
+// Availability status (available / sold_out / unavailable / limited)
+// ─────────────────────────────────────────────────────────
+
+export type AvailabilityStatus =
+  | "available"
+  | "sold_out"
+  | "unavailable"
+  | "limited";
+
+type FlagRow = { available: boolean; status?: AvailabilityStatus | null } | null | undefined;
+
+/** Sold out / unavailable block ordering; limited stays orderable. */
+function flagAvailable(flag: FlagRow, fallback: boolean): boolean {
+  if (!flag) return fallback;
+  if (flag.status) return flag.status === "available" || flag.status === "limited";
+  return flag.available;
+}
+
+/** Effective 4-state status for display. */
+function flagStatus(flag: FlagRow, fallback: boolean): AvailabilityStatus {
+  if (flag?.status) return flag.status;
+  if (flag) return flag.available ? "available" : "sold_out";
+  return fallback ? "available" : "sold_out";
+}
+
+// ─────────────────────────────────────────────────────────
+// Café clock (configured timezone) + offer scheduling
+// ─────────────────────────────────────────────────────────
+
+const DEFAULT_TZ = "Asia/Kolkata";
+
+function safeTz(tz?: string): string {
+  if (!tz) return DEFAULT_TZ;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return tz;
+  } catch {
+    return DEFAULT_TZ;
+  }
+}
+
+function parseHM(t?: string): number | null {
+  if (!t) return null;
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(t.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** Minutes since midnight in the café's timezone. */
+function cafeMinutes(now: number, tz: string): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(now));
+  const [h, m] = parts.split(":").map(Number);
+  return ((h % 24) || 0) * 60 + (m || 0);
+}
+
+/** Day of week in the café's timezone (0 = Sunday … 6 = Saturday). */
+function cafeDayOfWeek(now: number, tz: string): number {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(new Date(now));
+  return Math.max(0, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd));
+}
+
+/** Café-local calendar day (YYYY-MM-DD) — used for daily rotations. */
+function cafeDateKey(now: number, tz: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date(now));
+}
+
+/** Deterministic non-negative hash — stable daily pick rotation, no randomness. */
+function hashString(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+interface ScheduleFields {
+  active: boolean;
+  validFrom: number;
+  validUntil: number;
+  dailyDays?: number[] | null;
+  dailyStart?: string | null;
+  dailyEnd?: string | null;
+}
+
+/**
+ * Automatic activation: an offer only counts while it is active AND inside its
+ * start/end window, weekday set, and daily time window (café-local time).
+ */
+function offerInSchedule(o: ScheduleFields, now: number, tz: string): boolean {
+  if (!o.active) return false;
+  if (now < o.validFrom || now >= o.validUntil) return false;
+  if (o.dailyDays && o.dailyDays.length > 0 && !o.dailyDays.includes(cafeDayOfWeek(now, tz))) {
+    return false;
+  }
+  const start = parseHM(o.dailyStart ?? undefined);
+  const end = parseHM(o.dailyEnd ?? undefined);
+  if (start != null || end != null) {
+    const s = start ?? 0;
+    const e = end ?? 1439;
+    const cur = cafeMinutes(now, tz);
+    if (s <= e) {
+      if (cur < s || cur >= e) return false;
+    } else if (cur < s && cur >= e) {
+      return false; // window wraps midnight
+    }
+  }
+  return true;
+}
+
+type CafeOpenState = "open" | "closing_soon" | "closed";
+
+function cafeOpenState(
+  now: number,
+  tz: string,
+  openTime?: string,
+  closeTime?: string,
+  closingSoonMin = 30,
+): CafeOpenState {
+  const o = parseHM(openTime);
+  const c = parseHM(closeTime);
+  if (o == null || c == null) return "open"; // unconfigured hours never block
+  const cur = cafeMinutes(now, tz);
+  const isOpen = o === c ? true : o < c ? cur >= o && cur < c : cur >= o || cur < c;
+  if (!isOpen) return "closed";
+  const untilClose = (c - cur + 1440) % 1440;
+  return untilClose <= Math.max(0, closingSoonMin) ? "closing_soon" : "open";
+}
+
+// ── Server-authoritative discount engine ──────────────────
+
+interface PricedLine {
+  productId: string;
+  price: number;
+  quantity: number;
+}
+
+interface OfferDoc extends ScheduleFields {
+  _id: string & { __tableName: "offers" };
+  description: string;
+  discountType: "percentage" | "fixed" | "bogo";
+  discountValue: number;
+  minOrder: number;
+  maxDiscount?: number | null;
+  usageLimit?: number | null;
+  usedCount: number;
+  scopeProductIds?: string[] | null;
+  bogoX?: number | null;
+  bogoY?: number | null;
+  firstOrderOnly?: boolean | null;
+}
+
+function scopedLines(offer: OfferDoc, lines: PricedLine[]): PricedLine[] {
+  const scope = offer.scopeProductIds;
+  if (!scope || scope.length === 0) return lines;
+  return lines.filter((l) => scope.includes(l.productId));
+}
+
+/**
+ * Computes the discount an offer yields for a cart — the single source of
+ * truth used by preview (validateCoupon) and commit (placeOrder), so the
+ * client can never negotiate a different number.
+ */
+function computeOfferDiscount(
+  offer: OfferDoc,
+  lines: PricedLine[],
+  subtotal: number,
+): number {
+  const inScope = scopedLines(offer, lines);
+  const scopeSubtotal =
+    inScope.length === lines.length
+      ? subtotal
+      : inScope.reduce((s, l) => s + l.price * l.quantity, 0);
+
+  if (offer.discountType === "bogo") {
+    const x = Math.min(Math.max(Math.round(offer.bogoX ?? 1), 1), 20);
+    const y = Math.min(Math.max(Math.round(offer.bogoY ?? 1), 1), 20);
+    const units: number[] = [];
+    inScope.forEach((l) => {
+      for (let i = 0; i < l.quantity; i++) units.push(l.price);
+    });
+    if (units.length === 0) return 0;
+    units.sort((a, b) => a - b); // free units are the cheapest ones
+    const freeUnits = Math.floor(units.length / (x + y)) * y;
+    if (freeUnits === 0) return 0;
+    const pct = Math.min(Math.max(offer.discountValue, 0), 100);
+    const raw = (units.slice(0, freeUnits).reduce((s, p) => s + p, 0) * pct) / 100;
+    return Math.min(Math.round(raw), scopeSubtotal, subtotal);
+  }
+
+  const raw =
+    offer.discountType === "percentage"
+      ? Math.round((scopeSubtotal * offer.discountValue) / 100)
+      : offer.discountValue;
+  return Math.min(raw, offer.maxDiscount ?? raw, scopeSubtotal, subtotal);
+}
+
+/** True when this guest has no prior order (by account, else by phone). */
+async function isFirstOrder(
+  ctx: QueryCtx | MutationCtx,
+  userId: string | null,
+  guestPhone?: string,
+): Promise<boolean> {
+  if (userId) {
+    const prior = await ctx.db
+      .query("orders")
+      .withIndex("by_user", (q) => q.eq("userId", userId as never))
+      .first();
+    if (prior) return false;
+  }
+  const phone = guestPhone ? normalizePhone(guestPhone) : "";
+  if (phone.length >= 8) {
+    const recent = await ctx.db.query("orders").order("desc").take(500);
+    if (recent.some((o) => o.guestPhone && normalizePhone(o.guestPhone) === phone)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 interface OrderableItem {
   id: string;
   name: string;
@@ -73,7 +296,7 @@ async function resolveOrderItem(
       price: priceEdited ? (override!.price as number) : staticProduct.price,
       // An admin price edit replaces any static sale price entirely.
       discountPrice: priceEdited ? undefined : staticProduct.discountPrice,
-      available: flag ? flag.available : staticProduct.available,
+      available: flagAvailable(flag, staticProduct.available),
       customizations: staticProduct.customizations,
       addOns: staticProduct.addOns,
     };
@@ -88,7 +311,7 @@ async function resolveOrderItem(
     id: custom.productId,
     name: custom.name,
     price: custom.price,
-    available: flag ? flag.available : custom.available,
+    available: flagAvailable(flag, custom.available),
   };
 }
 
@@ -177,37 +400,61 @@ export const placeOrder = mutation({
 
     const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
 
-    // ── 2. Tax from café settings (server-authoritative) ──
-    const taxRateRow = await ctx.db
-      .query("settings")
-      .withIndex("by_key", (q) => q.eq("key", "taxRate"))
-      .first();
-    const taxPct = Math.min(Math.max(Number(taxRateRow?.value ?? "5") || 5, 0), 30);
+    // ── 2. Café settings (server-authoritative): tax, clock, order policy ──
+    const settingsRows = await ctx.db.query("settings").collect();
+    const settingsMap: Record<string, string> = {};
+    settingsRows.forEach((r) => (settingsMap[r.key] = r.value));
+
+    const taxPct = Math.min(Math.max(Number(settingsMap.taxRate ?? "5") || 5, 0), 30);
     const tax = Math.round((subtotal * taxPct) / 100);
 
-    // ── 3. Re-validate + atomically redeem the coupon (usage-limit safe) ──
+    // Closed-café policy: the admin chooses whether orders are blocked or
+    // accepted as pre-orders while the café is shut (`ordersWhenClosed`).
+    const tz = safeTz(settingsMap.timezone);
+    const openState = cafeOpenState(
+      now,
+      tz,
+      settingsMap.openTime,
+      settingsMap.closeTime,
+      Number(settingsMap.closingSoonMinutes ?? "30") || 30,
+    );
+    if (openState === "closed" && settingsMap.ordersWhenClosed === "block") {
+      throw new Error(
+        `We're closed right now — orders reopen at ${settingsMap.openTime ?? "our opening time"}. You can still browse the menu and book a table.`,
+      );
+    }
+
+    const userId = await getAuthUserId(ctx);
+
+    // ── 3. Re-validate + atomically redeem the coupon (schedule-safe) ──
     let discount = 0;
     let couponCode: string | undefined = undefined;
     if (args.couponCode) {
       const code = args.couponCode.trim().toUpperCase().slice(0, 40);
-      const offer = await ctx.db
+      const offer = (await ctx.db
         .query("offers")
         .withIndex("by_code", (q) => q.eq("code", code))
-        .first();
-      const valid =
-        offer &&
-        offer.active &&
-        offer.validUntil > now &&
+        .first()) as OfferDoc | null;
+      let valid =
+        !!offer &&
+        offerInSchedule(offer, now, tz) &&
         subtotal >= offer.minOrder &&
         (offer.usageLimit == null || offer.usedCount < offer.usageLimit);
+
+      if (valid && offer!.firstOrderOnly) {
+        valid = await isFirstOrder(ctx, userId, args.guestPhone);
+      }
+
       if (offer && valid) {
-        const raw =
-          offer.discountType === "percentage"
-            ? Math.round((subtotal * offer.discountValue) / 100)
-            : offer.discountValue;
-        discount = Math.min(raw, offer.maxDiscount ?? raw, subtotal);
-        couponCode = code;
-        await ctx.db.patch(offer._id, { usedCount: offer.usedCount + 1 });
+        discount = computeOfferDiscount(offer, lines, subtotal);
+        if (discount > 0) {
+          couponCode = code;
+          await ctx.db.patch(offer!._id, { usedCount: offer!.usedCount + 1 });
+        }
+      } else if (offer) {
+        throw new Error(
+          "That coupon is no longer valid (schedule, minimum order, or usage limit). Please remove it and review your order.",
+        );
       }
     }
 
@@ -240,8 +487,6 @@ export const placeOrder = mutation({
     if (tableNumber !== undefined && (!Number.isFinite(tableNumber) || tableNumber < 1 || tableNumber > 999)) {
       throw new Error("That table number doesn't look right.");
     }
-
-    const userId = await getAuthUserId(ctx);
 
     const orderId = await ctx.db.insert("orders", {
       userId: userId ?? undefined,
@@ -441,12 +686,26 @@ const offerPatch = {
   description: v.optional(v.string()),
   title: v.optional(v.string()),
   tag: v.optional(v.string()),
-  discountType: v.union(v.literal("percentage"), v.literal("fixed")),
+  discountType: v.union(
+    v.literal("percentage"),
+    v.literal("fixed"),
+    v.literal("bogo"),
+  ),
   discountValue: v.number(),
   minOrder: v.number(),
   maxDiscount: v.optional(v.number()),
+  validFrom: v.optional(v.number()),
   validUntil: v.number(),
   active: v.boolean(),
+  usageLimit: v.optional(v.number()),
+  // Scheduling (auto activate/deactivate)
+  dailyDays: v.optional(v.array(v.number())),
+  dailyStart: v.optional(v.string()),
+  dailyEnd: v.optional(v.string()),
+  firstOrderOnly: v.optional(v.boolean()),
+  scopeProductIds: v.optional(v.array(v.string())),
+  bogoX: v.optional(v.number()),
+  bogoY: v.optional(v.number()),
 };
 
 export const listOffers = query({
@@ -460,8 +719,14 @@ export const listActiveOffers = query({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
+    const rows = await ctx.db.query("settings").collect();
+    const map: Record<string, string> = {};
+    rows.forEach((r) => (map[r.key] = r.value));
+    const tz = safeTz(map.timezone);
     const all = await ctx.db.query("offers").collect();
-    return all.filter((o) => o.active && o.validUntil > now);
+    // Schedule-aware: offers appear/disappear automatically as their
+    // start/end dates, weekdays, and daily windows elapse.
+    return all.filter((o) => offerInSchedule(o, now, tz));
   },
 });
 
@@ -469,18 +734,35 @@ export const saveOffer = mutation({
   args: offerPatch,
   handler: async (ctx, args) => {
     await assertAdmin(ctx);
+    const code = args.code.trim().toUpperCase().slice(0, 40);
+    if (!code) throw new Error("An offer code is required.");
+    if (!Number.isFinite(args.discountValue) || args.discountValue < 0) {
+      throw new Error("Discount value must be zero or greater.");
+    }
+    if (args.discountType === "percentage" && args.discountValue > 100) {
+      throw new Error("Percentage discounts cannot exceed 100%.");
+    }
+    if (args.validFrom !== undefined && args.validFrom >= args.validUntil) {
+      throw new Error("The start time must be before the end time.");
+    }
+    if (args.dailyStart && !parseHM(args.dailyStart)) {
+      throw new Error("Daily start must be a valid HH:MM time.");
+    }
+    if (args.dailyEnd && !parseHM(args.dailyEnd)) {
+      throw new Error("Daily end must be a valid HH:MM time.");
+    }
     const existing = await ctx.db
       .query("offers")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .withIndex("by_code", (q) => q.eq("code", code))
       .first();
+    const clean = { ...args, code, description: args.description ?? existing?.description ?? "" };
     if (existing) {
-      await ctx.db.patch(existing._id, { ...args, description: args.description ?? existing.description });
+      await ctx.db.patch(existing._id, clean);
       return existing._id;
     }
     return await ctx.db.insert("offers", {
-      ...args,
-      description: args.description ?? "",
-      validFrom: Date.now(),
+      ...clean,
+      validFrom: args.validFrom ?? Date.now(),
       usedCount: 0,
     });
   },
@@ -498,29 +780,72 @@ export const deleteOffer = mutation({
   },
 });
 
-/** Validate a coupon at checkout. Returns the computed discount or an error. */
+/**
+ * Validate a coupon at checkout. Returns the computed discount or an error.
+ * Runs the exact same schedule + discount engine as placeOrder, so what the
+ * customer previews is what the server commits.
+ */
 export const validateCoupon = query({
-  args: { code: v.string(), subtotal: v.number() },
+  args: {
+    code: v.string(),
+    subtotal: v.number(),
+    lines: v.optional(
+      v.array(
+        v.object({ productId: v.string(), price: v.number(), quantity: v.number() }),
+      ),
+    ),
+  },
   handler: async (ctx, args) => {
-    const code = args.code.trim().toUpperCase();
-    const offer = await ctx.db
+    const code = args.code.trim().toUpperCase().slice(0, 40);
+    const offer = (await ctx.db
       .query("offers")
       .withIndex("by_code", (q) => q.eq("code", code))
-      .first();
+      .first()) as OfferDoc | null;
 
     if (!offer) return { ok: false as const, error: "That code isn't valid." };
-    if (!offer.active) return { ok: false as const, error: "This coupon is no longer active." };
-    if (offer.validUntil < Date.now()) return { ok: false as const, error: "This coupon has expired." };
+
+    const now = Date.now();
+    const rows = await ctx.db.query("settings").collect();
+    const map: Record<string, string> = {};
+    rows.forEach((r) => (map[r.key] = r.value));
+    const tz = safeTz(map.timezone);
+
+    if (!offer.active) return { ok: false as const, error: "This coupon is paused." };
+    if (now < offer.validFrom)
+      return { ok: false as const, error: "This coupon isn't active yet — check its start time." };
+    if (now >= offer.validUntil)
+      return { ok: false as const, error: "This coupon has expired." };
+    if (!offerInSchedule(offer, now, tz)) {
+      return {
+        ok: false as const,
+        error:
+          offer.dailyDays?.length || offer.dailyStart || offer.dailyEnd
+            ? "This coupon isn't valid today or at this time of day."
+            : "This coupon isn't available right now.",
+      };
+    }
     if (offer.usageLimit != null && offer.usedCount >= offer.usageLimit)
       return { ok: false as const, error: "This coupon has reached its usage limit." };
     if (args.subtotal < offer.minOrder)
       return { ok: false as const, error: `Minimum order ₹${offer.minOrder} required.` };
+    if (offer.firstOrderOnly) {
+      const userId = await getAuthUserId(ctx);
+      const guestPhone = undefined; // preview has no phone yet; account check only
+      if (!(await isFirstOrder(ctx, userId, guestPhone))) {
+        return { ok: false as const, error: "This coupon is for first-time guests only." };
+      }
+    }
 
-    const raw =
-      offer.discountType === "percentage"
-        ? Math.round((args.subtotal * offer.discountValue) / 100)
-        : offer.discountValue;
-    const discount = Math.min(raw, offer.maxDiscount ?? raw, args.subtotal);
+    const lines = args.lines ?? [];
+    const discount = computeOfferDiscount(offer, lines, args.subtotal);
+    if (offer.discountType === "bogo" && discount === 0) {
+      return {
+        ok: false as const,
+        error: `Add more items — this is a Buy ${offer.bogoX ?? 1} Get ${offer.bogoY ?? 1} offer.`,
+      };
+    }
+    if (discount <= 0)
+      return { ok: false as const, error: "This coupon doesn't apply to the items in your cart." };
     return { ok: true as const, code, discount, description: offer.description };
   },
 });
@@ -540,18 +865,32 @@ export const setProductAvailability = mutation({
   args: {
     productId: v.string(),
     available: v.boolean(),
+    // Richer 4-state availability; falls back to the boolean when omitted.
+    status: v.optional(
+      v.union(
+        v.literal("available"),
+        v.literal("sold_out"),
+        v.literal("unavailable"),
+        v.literal("limited"),
+      ),
+    ),
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await assertAdmin(ctx);
+    const status: AvailabilityStatus =
+      args.status ?? (args.available ? "available" : "sold_out");
+    // Keep the legacy boolean in lockstep so older readers stay correct.
+    const available = status === "available" || status === "limited";
+    const patch = { available, status, note: args.note };
     const existing = await ctx.db
       .query("productFlags")
       .withIndex("by_product", (q) => q.eq("productId", args.productId))
       .first();
     if (existing) {
-      await ctx.db.patch(existing._id, { available: args.available, note: args.note });
+      await ctx.db.patch(existing._id, patch);
     } else {
-      await ctx.db.insert("productFlags", args);
+      await ctx.db.insert("productFlags", { productId: args.productId, ...patch });
     }
   },
 });
@@ -1033,6 +1372,23 @@ export const listReservations = query({
   },
 });
 
+/**
+ * The signed-in customer's own reservations (latest 20). Powers the live
+ * "booking confirmed" notification on the client; guests get [].
+ */
+export const listMyReservations = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return await ctx.db
+      .query("reservations")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(20);
+  },
+});
+
 /** Admin-only status change: confirm / complete / cancel a booking. */
 export const updateReservationStatus = mutation({
   args: {
@@ -1243,6 +1599,348 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   closeTime: "22:00",
   avgPrepMinutes: "12",
 };
+
+// ─────────────────────────────────────────────────────
+// Scheduled announcements (automatic homepage banner)
+// ─────────────────────────────────────────────────────
+
+/** Public: only announcements inside their start/expiry window. */
+export const listActiveAnnouncements = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    // Deliberately includes active rows whose startAt is still in the future:
+    // Convex re-runs queries on data changes, not on the clock, so a banner
+    // scheduled to go live while a page is open would otherwise never appear.
+    // The client drops rows outside their [startAt, endAt) window on a 30s tick.
+    const rows = await ctx.db
+      .query("announcements")
+      .withIndex("by_active", (q) => q.eq("active", true))
+      .take(50);
+    return rows
+      .filter((a) => a.endAt > now)
+      .sort((a, b) => b.startAt - a.startAt)
+      .slice(0, 8);
+  },
+});
+
+/** Admin: every announcement (including scheduled/expired ones). */
+export const listAnnouncements = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await isAdminCtx(ctx))) return [];
+    return await ctx.db.query("announcements").order("desc").take(100);
+  },
+});
+
+export const saveAnnouncement = mutation({
+  args: {
+    id: v.optional(v.id("announcements")),
+    message: v.string(),
+    tone: v.union(v.literal("info"), v.literal("promo"), v.literal("alert")),
+    startAt: v.number(),
+    endAt: v.number(),
+    active: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const message = clampStr(args.message, 200);
+    if (!message) throw new Error("Announcement text is required (max 200 characters).");
+    if (!(args.endAt > args.startAt)) {
+      throw new Error("The expiry time must be after the start time.");
+    }
+    const patch = {
+      message,
+      tone: args.tone,
+      startAt: args.startAt,
+      endAt: args.endAt,
+      active: args.active,
+    };
+    if (args.id) {
+      const existing = await ctx.db.get(args.id);
+      if (!existing) throw new Error("Announcement not found.");
+      await ctx.db.patch(args.id, patch);
+      return args.id;
+    }
+    return await ctx.db.insert("announcements", {
+      ...patch,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const deleteAnnouncement = mutation({
+  args: { id: v.id("announcements") },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const existing = await ctx.db.get(args.id);
+    if (existing) await ctx.db.delete(args.id);
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// Live café open/closed status
+// ─────────────────────────────────────────────────────
+
+/** Public: live open/closed/closing-soon state from admin-configured hours. */
+export const getCafeStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const rows = await ctx.db.query("settings").collect();
+    const map: Record<string, string> = {};
+    rows.forEach((r) => (map[r.key] = r.value));
+    const tz = safeTz(map.timezone);
+    const openTime = map.openTime || "10:00";
+    const closeTime = map.closeTime || "22:00";
+    const closingSoonMin = Number(map.closingSoonMinutes ?? "30") || 30;
+    const state = cafeOpenState(now, tz, openTime, closeTime, closingSoonMin);
+
+    const o = parseHM(openTime);
+    const c = parseHM(closeTime);
+    const cur = cafeMinutes(now, tz);
+    const minutesToClose =
+      o != null && c != null ? (c - cur + 1440) % 1440 : null;
+    const minutesToOpen =
+      o != null && c != null ? (o - cur + 1440) % 1440 : null;
+
+    return {
+      state,
+      openTime,
+      closeTime,
+      timezone: tz,
+      closingSoonMin,
+      minutesToClose: state === "closed" ? null : minutesToClose,
+      minutesToOpen: state === "closed" ? minutesToOpen : null,
+      // Admin policy: block = reject orders while closed; allow = accept
+      // orders as pre-orders (the default, preserving current behaviour).
+      preOrdersAllowed: map.ordersWhenClosed !== "block",
+      acceptOrders: state !== "closed" || map.ordersWhenClosed !== "block",
+    };
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// Daily highlights: today's special, picks, new arrivals
+// ─────────────────────────────────────────────────────
+
+interface HighlightProduct {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  category: string;
+  rating: number;
+  price: number;
+  dealPrice: number;
+  badge?: string;
+  status: AvailabilityStatus;
+  addedAt: number | null;
+  isCustom: boolean;
+}
+
+const DAYPART_CATS: Record<string, string[]> = {
+  morning: ["cat-coffee", "cat-sandwiches"],
+  afternoon: ["cat-cold-coffee", "cat-sides", "cat-pizza"],
+  evening: ["cat-shakes", "cat-desserts", "cat-coffee"],
+  night: ["cat-desserts", "cat-shakes", "cat-pasta"],
+};
+
+function daypartOfMinutes(mins: number): string {
+  if (mins >= 5 * 60 && mins < 11 * 60) return "morning";
+  if (mins >= 11 * 60 && mins < 16 * 60) return "afternoon";
+  if (mins >= 16 * 60 && mins < 21 * 60) return "evening";
+  return "night";
+}
+
+/**
+ * Deterministic, admin-overridable daily content. No AI APIs, no randomness:
+ * popularity from real orders + time-of-day affinity + a stable daily rotation.
+ */
+export const getDailyHighlights = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const [settingsRows, flags, overrides, customRows] = await Promise.all([
+      ctx.db.query("settings").collect(),
+      ctx.db.query("productFlags").collect(),
+      ctx.db.query("productOverrides").collect(),
+      ctx.db.query("customProducts").collect(),
+    ]);
+    const map: Record<string, string> = {};
+    settingsRows.forEach((r) => (map[r.key] = r.value));
+    const tz = safeTz(map.timezone);
+    const daypart = daypartOfMinutes(cafeMinutes(now, tz));
+
+    const flagMap = new Map(flags.map((f) => [f.productId, f]));
+    const overrideMap = new Map(overrides.map((o) => [o.productId, o]));
+
+    const pool: HighlightProduct[] = [
+      ...products
+        .filter((p) => !overrideMap.get(p.id)?.hidden)
+        .map((p) => {
+          const o = overrideMap.get(p.id);
+          const priceEdited = typeof o?.price === "number" && o.price > 0;
+          const price = priceEdited ? (o!.price as number) : p.price;
+          const flag = flagMap.get(p.id);
+          return {
+            id: p.id,
+            name: o?.name?.trim() || p.name,
+            slug: p.slug,
+            image: o?.image?.trim() || p.image,
+            category: p.category,
+            rating: p.rating,
+            price,
+            dealPrice: priceEdited
+              ? price
+              : (p.discountPrice ?? Math.round(price * 0.83)),
+            badge: p.badge,
+            status: flagStatus(flag, p.available),
+            addedAt: null,
+            isCustom: false,
+          };
+        }),
+      ...customRows
+        .filter((c) => !overrideMap.get(c.productId)?.hidden)
+        .map((c) => {
+          const flag = flagMap.get(c.productId);
+          return {
+            id: c.productId,
+            name: c.name,
+            slug: c.slug,
+            image: c.image,
+            category: c.category,
+            rating: c.rating,
+            price: c.price,
+            dealPrice: c.price,
+            badge: undefined as string | undefined,
+            status: flagStatus(flag, c.available),
+            addedAt: c.updatedAt,
+            isCustom: true,
+          };
+        }),
+    ];
+
+    const orderable = (p: HighlightProduct) =>
+      p.status === "available" || p.status === "limited";
+
+    // ── Real popularity from recent orders (no PII leaves this query) ──
+    const recentOrders = await ctx.db.query("orders").order("desc").take(300);
+    const qty = new Map<string, number>();
+    recentOrders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      o.items.forEach((it) => qty.set(it.productId, (qty.get(it.productId) ?? 0) + it.quantity));
+    });
+
+    // ── NEW arrivals: admin-added items inside the badge window ──
+    const badgeDays = Math.min(Math.max(Number(map.newBadgeDays ?? "14") || 14, 1), 365);
+    const badgeCutoff = now - badgeDays * 86400000;
+    const newIds = pool
+      .filter(
+        (p) =>
+          orderable(p) &&
+          ((p.isCustom && p.addedAt != null && p.addedAt > badgeCutoff) ||
+            p.badge === "new"),
+      )
+      .map((p) => p.id);
+
+    // ── Popular items (real sales, orderable only) ──
+    const popularIds = pool
+      .filter(orderable)
+      .map((p) => ({ id: p.id, score: qty.get(p.id) ?? 0, rating: p.rating }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || b.rating - a.rating)
+      .slice(0, 6)
+      .map((x) => x.id);
+
+    // ── Today's special: manual admin pick wins, else deterministic auto ──
+    const overrideId = map.specialOverride?.trim();
+    let special = pool.find((p) => p.id === overrideId && orderable(p)) ?? null;
+    let specialSource: "manual" | "auto" = "manual";
+    if (!special) {
+      specialSource = "auto";
+      const affinity = DAYPART_CATS[daypart] ?? [];
+      const candidates = pool.filter((p) => orderable(p) && affinity.includes(p.category));
+      const fallback = pool.filter(orderable);
+      const ranked = (candidates.length >= 3 ? candidates : fallback)
+        .map((p) => ({ p, score: (qty.get(p.id) ?? 0) * 4 + p.rating }))
+        .sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name))
+        .map((x) => x.p);
+      if (ranked.length > 0) {
+        // Stable within the café's day; rotates automatically each day.
+        const rotation = hashString(`${cafeDateKey(now, tz)}:special`) % Math.min(ranked.length, 8);
+        special = ranked[rotation];
+      }
+    }
+
+    // ── Time-aware recommendations (designated dynamic section only) ──
+    const affinity = DAYPART_CATS[daypart] ?? [];
+    const recommendedIds = pool
+      .filter((p) => orderable(p) && p.id !== special?.id)
+      .map((p) => ({
+        id: p.id,
+        score:
+          (qty.get(p.id) ?? 0) * 3 +
+          p.rating +
+          (affinity.includes(p.category) ? 2 : 0) +
+          (p.badge === "new" ? 0.5 : 0),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((x) => x.id);
+
+    return {
+      generatedFor: cafeDateKey(now, tz),
+      daypart,
+      special: special
+        ? {
+            productId: special.id,
+            name: special.name,
+            slug: special.slug,
+            image: special.image,
+            price: special.price,
+            dealPrice: special.dealPrice,
+            status: special.status,
+            source: specialSource,
+          }
+        : null,
+      recommendedIds,
+      popularIds,
+      newIds,
+      sampledOrders: recentOrders.length,
+    };
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// "Customers also ordered" — co-occurrence from real orders
+// ─────────────────────────────────────────────────────
+
+export const getRecommendations = query({
+  args: { productId: v.string() },
+  handler: async (ctx, args) => {
+    const orders = await ctx.db.query("orders").order("desc").take(300);
+    const counts = new Map<string, number>();
+    orders.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const ids = [...new Set(o.items.map((i) => i.productId))];
+      if (!ids.includes(args.productId)) return;
+      ids.forEach((other) => {
+        if (other !== args.productId) counts.set(other, (counts.get(other) ?? 0) + 1);
+      });
+    });
+    const items = [...counts.entries()]
+      .filter(([, c]) => c >= 2) // only meaningful patterns — no noise
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([productId, together]) => ({ productId, together }));
+    return { items, sampledOrders: orders.length };
+  },
+});
+
+// ─────────────────────────────────────────────────────
+// One-time seed: default offers, tables, and settings
+// ─────────────────────────────────────────────────────
 
 export const seedCafeData = mutation({
   args: {},

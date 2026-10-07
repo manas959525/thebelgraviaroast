@@ -49,7 +49,17 @@ export default function CheckoutPage() {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
     try {
-      const result = await convex.query(api.cafe.validateCoupon, { code, subtotal: total });
+      const result = await convex.query(api.cafe.validateCoupon, {
+        code,
+        subtotal: total,
+        // Send the cart lines so scoped/BOGO offers preview exactly what the
+        // server will compute (the server still re-prices authoritatively).
+        lines: items.map((item) => ({
+          productId: item.product.id,
+          price: item.product.discountPrice ?? item.product.price,
+          quantity: item.quantity,
+        })),
+      });
       if (result.ok) {
         setCoupon({ code: result.code, label: result.description, discount: result.discount });
         setCouponError("");

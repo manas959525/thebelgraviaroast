@@ -1,3 +1,9 @@
+export type AvailabilityStatus =
+  | "available"
+  | "sold_out"
+  | "unavailable"
+  | "limited";
+
 export interface Product {
   id: string;
   name: string;
@@ -12,6 +18,8 @@ export interface Product {
   prepTime: number;
   calories?: number;
   available: boolean;
+  /** Live 4-state availability from the café database (undefined = default). */
+  availability?: AvailabilityStatus;
   tags: string[];
   bestSeller?: boolean;
   badge?: "bestseller" | "new" | "spicy" | "chef's pick" | "signature";

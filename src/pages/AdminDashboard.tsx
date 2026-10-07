@@ -10,12 +10,12 @@ import {
   Grid3X3, List, LogOut, Menu, X, Star,
   Bell, CheckCheck, Copy, Printer,
   Power, PowerOff, ChefHat, ExternalLink, Bot, ShieldCheck,
-  CalendarCheck, Archive,
+  CalendarCheck, Archive, Megaphone, Users,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router";
-import { categories, products as staticProducts, type Product } from "@/data/menu";
+import { categories, products as staticProducts, type AvailabilityStatus, type Product } from "@/data/menu";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { daypartGreeting } from "@/lib/cafe";
@@ -33,6 +33,7 @@ type AdminSection =
   | "payments"
   | "inventory"
   | "offers"
+  | "announcements"
   | "analytics"
   | "assistant"
   | "content"
@@ -51,6 +52,7 @@ const sidebarItems: { id: AdminSection; label: string; icon: typeof LayoutDashbo
   { id: "tables", label: "Tables", icon: Calendar },
   { id: "qr-generator", label: "QR Generator", icon: QrCode },
   { id: "offers", label: "Offers & Coupons", icon: Tag },
+  { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "content", label: "Customer Content", icon: Star },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "assistant", label: "AI Assistant", icon: Bot },
@@ -106,6 +108,10 @@ function DashboardView() {
   const convexReservations = useQuery(api.cafe.listReservations);
   const convexAdvance = useMutation(api.cafe.updateOrderStatus);
   const convexResolve = useMutation(api.cafe.resolveServiceRequest);
+  // Live catalog health + offers for the insight cards.
+  const convexFlags = useQuery(api.cafe.listProductFlags);
+  const liveOffers = useQuery(api.cafe.listActiveOffers);
+  const customProducts = useQuery(api.cafe.listCustomProducts);
 
   const orders = convexOrders ?? [];
   const payments = convexPayments ?? [];
@@ -126,6 +132,40 @@ function DashboardView() {
   const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}-${String(nowDate.getDate()).padStart(2, "0")}`;
   const reservationsToday = reservations.filter((r) => r.date === todayKey).length;
 
+  // Catalog health from live admin availability flags.
+  const flags = convexFlags ?? [];
+  const isSoldOut = (f: { available: boolean; status?: string }) =>
+    f.status ? f.status === "sold_out" || f.status === "unavailable" : !f.available;
+  const soldOutFlags = flags.filter(isSoldOut);
+  const limitedFlags = flags.filter((f) => f.status === "limited");
+  const activeOfferCount = liveOffers?.length ?? 0;
+  const nameOf = (id: string) =>
+    staticProducts.find((p) => p.id === id)?.name ??
+    (customProducts ?? []).find((c) => c.productId === id)?.name ??
+    id;
+
+  // Popular items — aggregated from real order quantities.
+  const popularQty = new Map<string, number>();
+  orders.forEach((o) =>
+    o.items.forEach((it) => popularQty.set(it.name, (popularQty.get(it.name) ?? 0) + it.quantity)),
+  );
+  const popularItems = [...popularQty.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  // Recent unique customers — name + masked phone only (privacy-conscious).
+  const seenCustomers = new Set<string>();
+  const recentCustomers: { name: string; phone: string; at: number }[] = [];
+  for (const o of orders) {
+    const key = o.guestPhone ?? o.guestName ?? "";
+    if (!key || seenCustomers.has(key)) continue;
+    seenCustomers.add(key);
+    recentCustomers.push({
+      name: o.guestName?.trim() || "Guest",
+      phone: o.guestPhone ?? "",
+      at: o._creationTime,
+    });
+    if (recentCustomers.length >= 5) break;
+  }
+
   const stats = [
     { label: "Today's Revenue", value: revenueToday > 0 ? `₹${revenueToday.toLocaleString("en-IN")}` : "₹0", change: `${ordersToday} order${ordersToday === 1 ? "" : "s"} today`, icon: DollarSign, color: "text-sage" },
     { label: "Orders Today", value: `${ordersToday}`, change: "live", icon: ShoppingBag, color: "text-gold" },
@@ -134,6 +174,9 @@ function DashboardView() {
     { label: "Completed Orders", value: `${completedToday}`, change: "today", icon: CheckCheck, color: "text-sage" },
     { label: "Avg. Order Value", value: `₹${avgOrder}`, change: `${orders.length} total orders`, icon: TrendingUp, color: "text-blue-500" },
     { label: "Pending Verifications", value: `${pendingVerifications}`, change: pendingVerifications > 0 ? "needs review" : "all clear", icon: Calendar, color: "text-purple-500" },
+    { label: "Sold-Out Items", value: `${soldOutFlags.length}`, change: soldOutFlags.length > 0 ? "restock soon" : "all available", icon: XCircle, color: "text-red-500" },
+    { label: "Limited Stock", value: `${limitedFlags.length}`, change: limitedFlags.length > 0 ? "running low" : "none", icon: Package, color: "text-amber-500" },
+    { label: "Active Offers", value: `${activeOfferCount}`, change: activeOfferCount > 0 ? "live right now" : "none scheduled", icon: Tag, color: "text-gold" },
   ];
 
   const liveOrders: BoardOrder[] = orders
@@ -196,6 +239,88 @@ function DashboardView() {
             </div>
           );
         })}
+      </div>
+
+      {/* Live insights — popular items · recent customers · catalog health */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="glass-elevated rounded-2xl border-0 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-gold" />
+            <h3 className="text-sm font-bold text-foreground">Popular Items</h3>
+          </div>
+          {popularItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Order data appears here as customers place orders.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {popularItems.map(([name, qty], i) => (
+                <div key={name} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-foreground/80 truncate">
+                    <span className="font-bold text-muted-foreground mr-2">{i + 1}.</span>
+                    {name}
+                  </span>
+                  <span className="font-bold text-gold text-xs shrink-0">× {qty}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="glass-elevated rounded-2xl border-0 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="h-4 w-4 text-dusty-rose" />
+            <h3 className="text-sm font-bold text-foreground">Recent Customers</h3>
+          </div>
+          {recentCustomers.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Customers appear here after their first order.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {recentCustomers.map((c, i) => (
+                <div key={`${c.phone || c.name}-${i}`} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-foreground/80 truncate">
+                    {c.name}
+                    {c.phone && <span className="text-muted-foreground text-xs"> · ••••{c.phone.slice(-4)}</span>}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{timeAgo(c.at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="glass-elevated rounded-2xl border-0 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Package className="h-4 w-4 text-sage" />
+            <h3 className="text-sm font-bold text-foreground">Catalog Health</h3>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-muted-foreground shrink-0">Sold out / unavailable</span>
+              <span className={`font-bold text-right ${soldOutFlags.length ? "text-red-500" : "text-sage"}`}>
+                {soldOutFlags.length === 0
+                  ? "None"
+                  : soldOutFlags.slice(0, 3).map((f) => nameOf(f.productId)).join(", ") +
+                    (soldOutFlags.length > 3 ? ` +${soldOutFlags.length - 3}` : "")}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-muted-foreground shrink-0">Limited availability</span>
+              <span className={`font-bold text-right ${limitedFlags.length ? "text-amber-500" : "text-sage"}`}>
+                {limitedFlags.length === 0
+                  ? "None"
+                  : limitedFlags.slice(0, 3).map((f) => nameOf(f.productId)).join(", ") +
+                    (limitedFlags.length > 3 ? ` +${limitedFlags.length - 3}` : "")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Active offers</span>
+              <span className="font-bold text-gold">{activeOfferCount} live</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Payments awaiting verification</span>
+              <span className={`font-bold ${pendingVerifications ? "text-amber-500" : "text-sage"}`}>{pendingVerifications}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Live Orders Board */}
@@ -424,9 +549,20 @@ function ProductsView() {
   ];
 
   // DB availability overrides win over the static catalog flag.
-  const flagMap = new Map((flagsQuery ?? []).map((f) => [f.productId, f.available]));
+  const flagMap = new Map(
+    (flagsQuery ?? []).map((f) => [
+      f.productId,
+      f.status ?? (f.available ? ("available" as const) : ("sold_out" as const)),
+    ]),
+  );
   const availableMap = new Map(rows.map((r) => [r.p.id, r.p.available]));
-  const effective = (id: string) => flagMap.get(id) ?? availableMap.get(id) ?? true;
+  const effective = (id: string) => {
+    const s = flagMap.get(id);
+    if (s) return s === "available" || s === "limited";
+    return availableMap.get(id) ?? true;
+  };
+  const statusOf = (id: string): AvailabilityStatus =>
+    flagMap.get(id) ?? (effective(id) ? "available" : "sold_out");
 
   const filtered = rows.filter(
     (r) =>
@@ -439,34 +575,53 @@ function ProductsView() {
   const catalogueCount = rows.filter((r) => !r.hidden).length;
   const soldOutCount = rows.filter((r) => !r.hidden && !effective(r.p.id)).length;
 
-  const toggle = (id: string, name: string, next: boolean) => {
-    void setAvailability({ productId: id, available: next, note: next ? undefined : "Marked sold out by staff" });
-    toast.success(next ? `${name} is back on the menu` : `${name} marked sold out`);
+  const setTo = (id: string, name: string, status: AvailabilityStatus) => {
+    const available = status === "available" || status === "limited";
+    const notes: Record<AvailabilityStatus, string | undefined> = {
+      available: undefined,
+      limited: "Marked as limited availability by staff",
+      sold_out: "Marked sold out by staff",
+      unavailable: "Marked temporarily unavailable by staff",
+    };
+    void setAvailability({ productId: id, available, status, note: notes[status] });
+    const labels: Record<AvailabilityStatus, string> = {
+      available: "back on the menu",
+      limited: "set to limited availability",
+      sold_out: "marked sold out",
+      unavailable: "marked temporarily unavailable",
+    };
+    toast.success(`${name} ${labels[status]}`);
   };
 
-  const StatusChip = ({ id }: { id: string }) => (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${effective(id) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-      {effective(id) ? "Available" : "Sold Out"}
-    </span>
-  );
+  const STATUS_CHIP: Record<AvailabilityStatus, { cls: string; label: string }> = {
+    available: { cls: "bg-green-100 text-green-700", label: "Available" },
+    limited: { cls: "bg-amber-100 text-amber-700", label: "Limited" },
+    sold_out: { cls: "bg-red-100 text-red-700", label: "Sold Out" },
+    unavailable: { cls: "bg-gray-200 text-gray-600", label: "Unavailable" },
+  };
+
+  const StatusChip = ({ id }: { id: string }) => {
+    const chip = STATUS_CHIP[statusOf(id)];
+    return (
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${chip.cls}`}>
+        {chip.label}
+      </span>
+    );
+  };
 
   const ToggleButtons = ({ p }: { p: (typeof staticProducts)[0] }) => (
-    <div className="flex gap-1">
-      {effective(p.id) ? (
-        <button
-          onClick={() => toggle(p.id, p.name, false)}
-          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all"
-        >
-          <PowerOff className="h-3 w-3" /> Mark Sold Out
-        </button>
-      ) : (
-        <button
-          onClick={() => toggle(p.id, p.name, true)}
-          className="flex items-center gap-1 h-7 px-2 rounded-lg border text-[10px] font-bold text-sage hover:bg-green-50 transition-all"
-        >
-          <Power className="h-3 w-3" /> Mark Available
-        </button>
-      )}
+    <div className="flex gap-1 items-center">
+      <select
+        value={statusOf(p.id)}
+        onChange={(e) => setTo(p.id, p.name, e.target.value as AvailabilityStatus)}
+        aria-label={`Availability for ${p.name}`}
+        className="h-7 px-1.5 rounded-lg border border-border bg-background text-[10px] font-bold outline-none focus:border-gold cursor-pointer"
+      >
+        <option value="available">Available</option>
+        <option value="sold_out">Sold Out</option>
+        <option value="unavailable">Temp. Unavailable</option>
+        <option value="limited">Limited Stock</option>
+      </select>
       <Link
         to={`/menu/${p.slug}`}
         className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-muted"
@@ -1363,22 +1518,53 @@ function QRGeneratorView() {
   );
 }
 
+/** ms → value for <input type="datetime-local"> (browser-local time). */
+const toLocalInput = (ts: number) => {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const emptyOfferForm = () => ({
+  code: "",
+  description: "",
+  tag: "Special",
+  discountType: "percentage" as "percentage" | "fixed" | "bogo",
+  discountValue: "10",
+  bogoX: "1",
+  bogoY: "1",
+  minOrder: "0",
+  maxDiscount: "",
+  usageLimit: "",
+  validFrom: toLocalInput(Date.now()),
+  validUntil: toLocalInput(Date.now() + 30 * 86400000),
+  dailyDays: [] as number[],
+  dailyStart: "",
+  dailyEnd: "",
+  firstOrderOnly: false,
+  scopeProductIds: [] as string[],
+});
+
 function OffersView() {
   useSeededCafe();
   const dbOffers = useQuery(api.cafe.listOffers);
+  const customProducts = useQuery(api.cafe.listCustomProducts);
   const saveOffer = useMutation(api.cafe.saveOffer);
   const deleteOffer = useMutation(api.cafe.deleteOffer);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    code: "",
-    description: "",
-    tag: "Special",
-    discountType: "percentage" as "percentage" | "fixed",
-    discountValue: "10",
-    minOrder: "0",
-    maxDiscount: "",
-    days: "180",
-  });
+  const [form, setForm] = useState(emptyOfferForm);
+  // Stable per-mount snapshot of "now" (pure render — keeps lint happy).
+  const [now] = useState(() => Date.now());
+
+  const toggleDay = (day: number) =>
+    setForm((f) => ({
+      ...f,
+      dailyDays: f.dailyDays.includes(day)
+        ? f.dailyDays.filter((d) => d !== day)
+        : [...f.dailyDays, day],
+    }));
 
   const create = () => {
     const code = form.code.trim().toUpperCase();
@@ -1386,24 +1572,66 @@ function OffersView() {
       toast.error("Give the coupon a code");
       return;
     }
+    const validFrom = form.validFrom ? new Date(form.validFrom).getTime() : Date.now();
+    const validUntil = form.validUntil
+      ? new Date(form.validUntil).getTime()
+      : Date.now() + 30 * 86400000;
+    if (!Number.isFinite(validUntil) || validUntil <= Date.now()) {
+      toast.error("Pick an end time in the future");
+      return;
+    }
+    if (!Number.isFinite(validFrom) || validFrom >= validUntil) {
+      toast.error("The start time must be before the end time");
+      return;
+    }
+    if ((form.dailyStart && !form.dailyEnd) || (!form.dailyStart && form.dailyEnd)) {
+      toast.error("Set both daily window times, or leave both blank");
+      return;
+    }
+    const desc =
+      form.discountType === "bogo"
+        ? `Buy ${form.bogoX || 1} Get ${form.bogoY || 1} free`
+        : form.description.trim() ||
+          `${form.discountValue}${form.discountType === "percentage" ? "%" : "₹"} off`;
     void saveOffer({
       code,
-      description: form.description.trim() || `${form.discountValue}${form.discountType === "percentage" ? "%" : "₹"} off`,
+      description: desc,
       tag: form.tag,
       discountType: form.discountType,
-      discountValue: Number(form.discountValue) || 0,
+      discountValue:
+        form.discountType === "bogo"
+          ? Math.min(Math.max(Number(form.discountValue) || 100, 0), 100)
+          : Number(form.discountValue) || 0,
       minOrder: Number(form.minOrder) || 0,
       maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : undefined,
-      validUntil: Date.now() + (Number(form.days) || 30) * 86400000,
+      usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
+      validFrom,
+      validUntil,
       active: true,
+      dailyDays: form.dailyDays.length ? [...form.dailyDays].sort((a, b) => a - b) : undefined,
+      dailyStart: form.dailyStart || undefined,
+      dailyEnd: form.dailyEnd || undefined,
+      firstOrderOnly: form.firstOrderOnly || undefined,
+      scopeProductIds: form.scopeProductIds.length ? form.scopeProductIds : undefined,
+      bogoX: form.discountType === "bogo" ? Math.max(1, Number(form.bogoX) || 1) : undefined,
+      bogoY: form.discountType === "bogo" ? Math.max(1, Number(form.bogoY) || 1) : undefined,
     });
     toast.success(`Coupon ${code} is live`);
     setCreating(false);
-    setForm({ code: "", description: "", tag: "Special", discountType: "percentage", discountValue: "10", minOrder: "0", maxDiscount: "", days: "180" });
+    setForm(emptyOfferForm());
   };
 
-  const fmtDiscount = (o: { discountType: "percentage" | "fixed"; discountValue: number }) =>
-    o.discountType === "percentage" ? `${o.discountValue}%` : `₹${o.discountValue}`;
+  const fmtDiscount = (o: {
+    discountType: "percentage" | "fixed" | "bogo";
+    discountValue: number;
+    bogoX?: number | null;
+    bogoY?: number | null;
+  }) =>
+    o.discountType === "percentage"
+      ? `${o.discountValue}%`
+      : o.discountType === "fixed"
+        ? `₹${o.discountValue}`
+        : `Buy ${o.bogoX ?? 1} Get ${o.bogoY ?? 1}`;
 
   return (
     <div className="space-y-6">
@@ -1432,15 +1660,28 @@ function OffersView() {
           </div>
           <div>
             <label className="text-xs font-medium block mb-1">Type</label>
-            <select value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value as "percentage" | "fixed" })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold">
+            <select value={form.discountType} onChange={(e) => { const t = e.target.value as "percentage" | "fixed" | "bogo"; setForm({ ...form, discountType: t, ...(t === "bogo" ? { discountValue: "100" } : {}) }); }} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold">
               <option value="percentage">Percentage (%)</option>
               <option value="fixed">Fixed (₹)</option>
+              <option value="bogo">Buy X Get Y</option>
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium block mb-1">Discount value</label>
+            <label className="text-xs font-medium block mb-1">{form.discountType === "bogo" ? "Free item % off" : "Discount value"}</label>
             <input type="number" min={1} value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
           </div>
+          {form.discountType === "bogo" && (
+            <>
+              <div>
+                <label className="text-xs font-medium block mb-1">Buy X (quantity)</label>
+                <input type="number" min={1} value={form.bogoX} onChange={(e) => setForm({ ...form, bogoX: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1">Get Y (free)</label>
+                <input type="number" min={1} value={form.bogoY} onChange={(e) => setForm({ ...form, bogoY: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+              </div>
+            </>
+          )}
           <div>
             <label className="text-xs font-medium block mb-1">Max discount (₹, optional)</label>
             <input type="number" min={0} value={form.maxDiscount} onChange={(e) => setForm({ ...form, maxDiscount: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
@@ -1450,8 +1691,73 @@ function OffersView() {
             <input type="number" min={0} value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
           </div>
           <div>
-            <label className="text-xs font-medium block mb-1">Valid for (days)</label>
-            <input type="number" min={1} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+            <label className="text-xs font-medium block mb-1">Starts at</label>
+            <input type="datetime-local" value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Ends at</label>
+            <input type="datetime-local" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Usage limit (optional)</label>
+            <input type="number" min={1} placeholder="Unlimited" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="text-xs font-medium block mb-1">Active days — auto on/off by weekday (none = every day)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAYS.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    form.dailyDays.includes(i)
+                      ? "bg-gold text-white border-gold"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Daily window start (optional)</label>
+            <input type="time" value={form.dailyStart} onChange={(e) => setForm({ ...form, dailyStart: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Daily window end (optional)</label>
+            <input type="time" value={form.dailyEnd} onChange={(e) => setForm({ ...form, dailyEnd: e.target.value })} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold" />
+          </div>
+          <div className="flex items-end pb-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.firstOrderOnly}
+                onChange={(e) => setForm({ ...form, firstOrderOnly: e.target.checked })}
+                className="h-4 w-4 rounded accent-gold"
+              />
+              First-order guests only
+            </label>
+          </div>
+          <div className="sm:col-span-3">
+            <label className="text-xs font-medium block mb-1">
+              Applicable products <span className="font-normal text-muted-foreground">(Ctrl/Cmd-click to multi-select — none = whole menu)</span>
+            </label>
+            <select
+              multiple
+              size={5}
+              value={form.scopeProductIds}
+              onChange={(e) => setForm({ ...form, scopeProductIds: Array.from(e.target.selectedOptions).map((o) => o.value) })}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold"
+            >
+              {staticProducts.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+              {(customProducts ?? []).map((p) => (
+                <option key={p.productId} value={p.productId}>{p.name} (custom)</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium block mb-1">Tag</label>
@@ -1485,7 +1791,23 @@ function OffersView() {
               (dbOffers ?? []).map((o) => (
                 <tr key={o.code} className="border-b last:border-0">
                   <td className="px-5 py-3 font-mono font-bold">{o.code}</td>
-                  <td className="px-5 py-3">{fmtDiscount(o)}{o.maxDiscount ? <span className="text-[10px] text-muted-foreground"> (max ₹{o.maxDiscount})</span> : null}</td>
+                  <td className="px-5 py-3">
+                    {fmtDiscount(o)}{o.maxDiscount ? <span className="text-[10px] text-muted-foreground"> (max ₹{o.maxDiscount})</span> : null}
+                    {(o.firstOrderOnly || (o.dailyDays && o.dailyDays.length > 0) || (o.dailyStart && o.dailyEnd) || (o.scopeProductIds && o.scopeProductIds.length > 0) || o.usageLimit != null || (o.validFrom && o.validFrom > now)) && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {o.validFrom && o.validFrom > now && (
+                          <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Starts {new Date(o.validFrom).toLocaleDateString("en-IN")}</span>
+                        )}
+                        {o.firstOrderOnly && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">First order</span>}
+                        {o.dailyDays && o.dailyDays.length > 0 && o.dailyDays.length < 7 && (
+                          <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{o.dailyDays.map((d) => WEEKDAYS[d] ?? d).join("·")}</span>
+                        )}
+                        {o.dailyStart && o.dailyEnd && <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{o.dailyStart}–{o.dailyEnd}</span>}
+                        {o.scopeProductIds && o.scopeProductIds.length > 0 && <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{o.scopeProductIds.length} items</span>}
+                        {o.usageLimit != null && <span className="text-[9px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded">limit {o.usageLimit}</span>}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-muted-foreground">{o.minOrder > 0 ? `₹${o.minOrder}` : "—"}</td>
                   <td className="px-5 py-3">{o.usedCount}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(o.validUntil).toLocaleDateString("en-IN")}</td>
@@ -1497,7 +1819,7 @@ function OffersView() {
                   <td className="px-5 py-3">
                     <div className="flex gap-1">
                       <button
-                        onClick={() => { void saveOffer({ code: o.code, description: o.description, title: o.title, tag: o.tag, discountType: o.discountType, discountValue: o.discountValue, minOrder: o.minOrder, maxDiscount: o.maxDiscount, validUntil: o.validUntil, active: !o.active }); toast.success(o.active ? `${o.code} paused` : `${o.code} re-activated`); }}
+                        onClick={() => { void saveOffer({ code: o.code, description: o.description, title: o.title, tag: o.tag, discountType: o.discountType, discountValue: o.discountValue, minOrder: o.minOrder, maxDiscount: o.maxDiscount, validFrom: o.validFrom, validUntil: o.validUntil, usageLimit: o.usageLimit, dailyDays: o.dailyDays, dailyStart: o.dailyStart, dailyEnd: o.dailyEnd, firstOrderOnly: o.firstOrderOnly, scopeProductIds: o.scopeProductIds, bogoX: o.bogoX, bogoY: o.bogoY, active: !o.active }); toast.success(o.active ? `${o.code} paused` : `${o.code} re-activated`); }}
                         className="h-7 px-2 rounded-lg border flex items-center gap-1 text-[10px] font-bold hover:bg-muted"
                       >
                         {o.active ? <><PowerOff className="h-3 w-3" /> Pause</> : <><Power className="h-3 w-3" /> Activate</>}
@@ -1512,6 +1834,192 @@ function OffersView() {
                   </td>
                 </tr>
               ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Admin: scheduled banner announcements — auto appear/expire on the live site. */
+function AnnouncementsView() {
+  const announcements = useQuery(api.cafe.listAnnouncements);
+  const saveAnnouncement = useMutation(api.cafe.saveAnnouncement);
+  const deleteAnnouncement = useMutation(api.cafe.deleteAnnouncement);
+  const [creating, setCreating] = useState(false);
+  // Stable per-mount snapshot of "now" for the schedule state labels.
+  const [now] = useState(() => Date.now());
+  const [form, setForm] = useState(() => ({
+    message: "",
+    tone: "info" as "info" | "promo" | "alert",
+    startAt: toLocalInput(Date.now()),
+    endAt: toLocalInput(Date.now() + 86400000),
+    active: true,
+  }));
+
+  const publish = () => {
+    const message = form.message.trim();
+    if (!message) {
+      toast.error("Write the announcement text first");
+      return;
+    }
+    const startAt = new Date(form.startAt).getTime();
+    const endAt = new Date(form.endAt).getTime();
+    if (!Number.isFinite(endAt) || endAt <= startAt) {
+      toast.error("The expiry time must be after the start time");
+      return;
+    }
+    void saveAnnouncement({ message, tone: form.tone, startAt, endAt, active: form.active });
+    toast.success("Announcement published — it appears and expires automatically");
+    setCreating(false);
+    setForm({
+      message: "",
+      tone: "info",
+      startAt: toLocalInput(Date.now()),
+      endAt: toLocalInput(Date.now() + 86400000),
+      active: true,
+    });
+  };
+
+  const stateOf = (a: { startAt: number; endAt: number; active: boolean }) => {
+    if (!a.active) return { label: "Paused", cls: "bg-red-100 text-red-700" };
+    if (now < a.startAt) return { label: "Scheduled", cls: "bg-blue-100 text-blue-700" };
+    if (now >= a.endAt) return { label: "Expired", cls: "bg-muted text-muted-foreground" };
+    return { label: "Live now", cls: "bg-green-100 text-green-700" };
+  };
+
+  const TONE_CHIP: Record<string, string> = {
+    promo: "bg-dusty-rose/10 text-dusty-rose",
+    info: "bg-blue-100 text-blue-700",
+    alert: "bg-amber-100 text-amber-700",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Announcements</h2>
+          <p className="text-sm text-muted-foreground">
+            Banner messages on the customer site — they appear and disappear on their own schedule.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(!creating)}
+          className="flex items-center gap-2 bg-gold text-white px-4 py-2 rounded-xl text-sm font-semibold"
+        >
+          <Plus className="h-4 w-4" /> {creating ? "Cancel" : "New Announcement"}
+        </button>
+      </div>
+
+      {creating && (
+        <div className="glass-elevated rounded-2xl border-0 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-3">
+            <label className="text-xs font-medium block mb-1">Message (max 200 characters)</label>
+            <input
+              value={form.message}
+              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              placeholder="20% OFF on all coffees today!"
+              maxLength={200}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Tone</label>
+            <select
+              value={form.tone}
+              onChange={(e) => setForm({ ...form, tone: e.target.value as "info" | "promo" | "alert" })}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold"
+            >
+              <option value="info">Info (navy)</option>
+              <option value="promo">Promo (rose)</option>
+              <option value="alert">Alert (amber)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Starts at</label>
+            <input
+              type="datetime-local"
+              value={form.startAt}
+              onChange={(e) => setForm({ ...form, startAt: e.target.value })}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1">Expires at</label>
+            <input
+              type="datetime-local"
+              value={form.endAt}
+              onChange={(e) => setForm({ ...form, endAt: e.target.value })}
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold"
+            />
+          </div>
+          <div className="sm:col-span-3 flex justify-end">
+            <button
+              onClick={publish}
+              className="bg-gold text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gold/90 transition-all"
+            >
+              Publish Announcement
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="glass-elevated rounded-2xl border-0 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Message</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Tone</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Window</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">State</th>
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {announcements === undefined ? (
+              <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</td></tr>
+            ) : announcements.length === 0 ? (
+              <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">No announcements yet — publish one above to banner it on the site.</td></tr>
+            ) : (
+              announcements.map((a) => {
+                const state = stateOf(a);
+                return (
+                  <tr key={a._id} className="border-b last:border-0">
+                    <td className="px-5 py-3 max-w-[320px]"><span className="line-clamp-2">{a.message}</span></td>
+                    <td className="px-5 py-3">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${TONE_CHIP[a.tone] ?? TONE_CHIP.info}`}>{a.tone}</span>
+                    </td>
+                    <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(a.startAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      <span className="mx-1">→</span>
+                      {new Date(a.endAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${state.cls}`}>{state.label}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            void saveAnnouncement({ id: a._id, message: a.message, tone: a.tone, startAt: a.startAt, endAt: a.endAt, active: !a.active });
+                            toast.success(a.active ? "Announcement paused" : "Announcement re-activated");
+                          }}
+                          className="h-7 px-2 rounded-lg border flex items-center gap-1 text-[10px] font-bold hover:bg-muted"
+                        >
+                          {a.active ? <><PowerOff className="h-3 w-3" /> Pause</> : <><Power className="h-3 w-3" /> Activate</>}
+                        </button>
+                        <button
+                          onClick={() => { void deleteAnnouncement({ id: a._id }); toast.success("Announcement deleted"); }}
+                          className="h-7 w-7 rounded-lg border flex items-center justify-center hover:bg-red-50 text-red-500"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1634,6 +2142,32 @@ function AnalyticsView() {
   });
   const topItems = [...itemCounts.values()].sort((a, b) => b.qty - a.qty).slice(0, 5);
 
+  // Peak ordering hours from real order timestamps (browser-local time).
+  const hourCounts = new Map<number, number>();
+  orders.forEach((o) => {
+    const h = new Date(o._creationTime).getHours();
+    hourCounts.set(h, (hourCounts.get(h) ?? 0) + 1);
+  });
+  const peakHours = [...hourCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const fmtHour = (h: number) => `${((h + 11) % 12) + 1} ${h < 12 ? "AM" : "PM"}`;
+
+  // Popular categories via the catalog mapping of sold item names.
+  const catCounts = new Map<string, number>();
+  orders.forEach((o) =>
+    o.items.forEach((it) => {
+      const p = staticProducts.find((s) => s.name === it.name);
+      const cat = categories.find((c) => c.id === p?.category)?.name ?? "Other";
+      catCounts.set(cat, (catCounts.get(cat) ?? 0) + it.quantity);
+    }),
+  );
+  const popularCategories = [...catCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  // Slow movers: catalog items with the fewest units sold in the sampled orders.
+  const slowMovers = staticProducts
+    .map((p) => ({ name: p.name, qty: itemCounts.get(p.name)?.qty ?? 0 }))
+    .sort((a, b) => a.qty - b.qty)
+    .slice(0, 4);
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
@@ -1673,6 +2207,63 @@ function AnalyticsView() {
           </div>
         )}
       </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-border/50 p-6">
+          <h3 className="font-semibold mb-1">Peak Ordering Times</h3>
+          <p className="text-xs text-muted-foreground mb-4">Busiest hours from real orders</p>
+          {peakHours.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Order data will appear here as customers place orders.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {peakHours.map(([h, count], i) => (
+                <div key={h} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground/80">
+                    <span className="font-bold text-muted-foreground mr-2">{i + 1}.</span>
+                    {fmtHour(h)}
+                  </span>
+                  <span className="font-bold text-gold text-xs">{count} order{count === 1 ? "" : "s"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl border border-border/50 p-6">
+          <h3 className="font-semibold mb-1">Popular Categories</h3>
+          <p className="text-xs text-muted-foreground mb-4">By units sold across all orders</p>
+          {popularCategories.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Category trends will appear once orders come in.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {popularCategories.map(([name, qty], i) => (
+                <div key={name} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground/80">
+                    <span className="font-bold text-muted-foreground mr-2">{i + 1}.</span>
+                    {name}
+                  </span>
+                  <span className="font-bold text-sage text-xs">{qty} sold</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl border border-border/50 p-6">
+          <h3 className="font-semibold mb-1">Slow Movers</h3>
+          <p className="text-xs text-muted-foreground mb-4">Menu items selling the least — good promo candidates</p>
+          <div className="space-y-2.5">
+            {slowMovers.map((item) => (
+              <div key={item.name} className="flex items-center justify-between text-sm">
+                <span className="text-foreground/80 truncate">{item.name}</span>
+                <span className={`font-bold text-xs shrink-0 ${item.qty === 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                  {item.qty === 0 ? "no sales yet" : `${item.qty} sold`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Aggregated order statistics only — no customer information is shown or exported here.
+      </p>
     </div>
   );
 }
@@ -1684,7 +2275,7 @@ function SettingsView() {
   const [form, setForm] = useState<Record<string, string> | null>(null);
   const value = (key: string) => form?.[key] ?? settings?.[key] ?? "";
   const set = (key: string, v: string) => setForm({ ...(form ?? settings ?? {}), [key]: v });
-  const fields: { key: string; label: string; hint?: string; wide?: boolean }[] = [
+  const fields: { key: string; label: string; hint?: string; wide?: boolean; options?: string[] }[] = [
     { key: "cafeName", label: "Café Name" },
     { key: "tagline", label: "Tagline" },
     { key: "phone", label: "Phone" },
@@ -1696,6 +2287,12 @@ function SettingsView() {
     { key: "openTime", label: "Opens At" },
     { key: "closeTime", label: "Closes At" },
     { key: "avgPrepMinutes", label: "Avg. Prep Time (min)", hint: "Shown on the homepage status strip" },
+    // ── Dynamic behaviour config points ──
+    { key: "timezone", label: "Timezone", hint: "Config point: IANA zone for the café clock, open/closed status & offer schedules (e.g. Asia/Kolkata)" },
+    { key: "closingSoonMinutes", label: "Closing-Soon Threshold (min)", hint: "Shows 🟡 'Closing soon' this many minutes before close (default 30)" },
+    { key: "ordersWhenClosed", label: "Orders While Closed", hint: "Config point: 'block' refuses orders outside opening hours; 'allow' accepts pre-orders (default)", options: ["allow", "block"] },
+    { key: "newBadgeDays", label: "NEW Badge Duration (days)", hint: "How long new menu items keep their NEW badge (default 14)" },
+    { key: "specialOverride", label: "Today's Special Override", hint: "Config point: product ID to pin as Today's Special — leave blank for the automatic daily pick" },
   ];
   const save = () => {
     if (!form) return;
@@ -1720,11 +2317,26 @@ function SettingsView() {
                 <div key={f.key} className={f.wide ? "sm:col-span-2" : ""}>
                   <label className="text-sm font-medium">{f.label}</label>
                   {f.hint && <span className="text-[10px] text-muted-foreground block">{f.hint}</span>}
-                  <input
-                    value={value(f.key)}
-                    onChange={(e) => set(f.key, e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold"
-                  />
+                  {f.options ? (
+                    <select
+                      value={value(f.key)}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold"
+                    >
+                      {!f.options.includes(value(f.key)) && (
+                        <option value="">{value(f.key) || "not set"}</option>
+                      )}
+                      {f.options.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={value(f.key)}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-gold"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -1800,6 +2412,7 @@ export default function AdminDashboardPage() {
       case "tables": return <TablesView />;
       case "qr-generator": return <QRGeneratorView />;
       case "offers": return <OffersView />;
+      case "announcements": return <AnnouncementsView />;
       case "content": return <ContentView />;
       case "analytics": return <AnalyticsView />;
       case "assistant": return <AssistantView />;

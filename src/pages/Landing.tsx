@@ -304,8 +304,25 @@ function FindYourTable() {
 }
 
 // ── Today's Special ────────────────────────────────
-function TodaySpecial({ settings }: { settings?: Record<string, string> | null }) {
-  const { product, discountPrice, remaining } = getTodaySpecial();
+function TodaySpecial({
+  settings,
+  products,
+}: {
+  settings?: Record<string, string> | null;
+  products: Product[];
+}) {
+  // Live daily highlight from the café database: an admin manual pick wins,
+  // otherwise a deterministic time/popularity-based selection.
+  const highlights = useQuery(api.cafe.getDailyHighlights);
+  const fallback = getTodaySpecial();
+  const dbSpecial = highlights?.special;
+  const resolved = dbSpecial
+    ? products.find((p) => p.id === dbSpecial.productId)
+    : undefined;
+  const product = resolved ?? fallback.product;
+  const discountPrice = resolved && dbSpecial ? dbSpecial.dealPrice : fallback.discountPrice;
+  const remaining = fallback.remaining;
+  const hasDeal = discountPrice < product.price;
   const openNow = isCafeOpen(settings?.openTime, settings?.closeTime);
   const prepMin = Number(settings?.avgPrepMinutes ?? "12") || 12;
   const openLabel = openNow ? `${formatClock(settings?.openTime ?? "08:00")} – ${formatClock(settings?.closeTime ?? "23:00")}` : `Opens ${formatClock(settings?.openTime ?? "08:00")}`;
@@ -361,10 +378,14 @@ function TodaySpecial({ settings }: { settings?: Record<string, string> | null }
               </motion.div>
               <motion.div variants={fadeUp} custom={4} className="flex items-baseline gap-3 mb-6">
                 <span className="text-4xl font-bold text-amber-300">₹{discountPrice}</span>
-                <span className="text-lg text-white/40 line-through">₹{product.price}</span>
-                <span className="text-xs font-semibold bg-amber-400/15 text-amber-200 px-2.5 py-1 rounded-full">
-                  {Math.round(((product.price - discountPrice) / product.price) * 100)}% OFF
-                </span>
+                {hasDeal && (
+                  <span className="text-lg text-white/40 line-through">₹{product.price}</span>
+                )}
+                {hasDeal && product.price > 0 && (
+                  <span className="text-xs font-semibold bg-amber-400/15 text-amber-200 px-2.5 py-1 rounded-full">
+                    {Math.round(((product.price - discountPrice) / product.price) * 100)}% OFF
+                  </span>
+                )}
               </motion.div>
               <motion.div variants={fadeUp} custom={5} className="flex flex-wrap items-center gap-4">
                 <button onClick={handleOrder} className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-navy px-7 py-3.5 rounded-xl text-sm font-bold transition-all hover:shadow-xl hover:shadow-amber-400/20 hover:-translate-y-0.5">
@@ -411,8 +432,18 @@ function TodaySpecial({ settings }: { settings?: Record<string, string> | null }
 }
 
 // ── Daypart picks ───────────────────────────────────
-function DaypartPicks() {
-  const picks = getDaypartPicks();
+function DaypartPicks({ products }: { products: Product[] }) {
+  // Designated time-aware section: picks come from the live daily highlight
+  // (real orders + time-of-day), falling back to the static daypart list.
+  const highlights = useQuery(api.cafe.getDailyHighlights);
+  const staticPicks = getDaypartPicks();
+  const livePicks = (highlights?.recommendedIds ?? [])
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is Product => !!p && p.available);
+  const picks = [
+    ...livePicks,
+    ...staticPicks.filter((s) => !livePicks.some((l) => l.id === s.id)),
+  ].slice(0, 3);
   return (
     <section className="py-12 sm:py-16 bg-warm-gradient">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -453,6 +484,77 @@ function DaypartPicks() {
                     >
                       +
                     </button>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── New at The Belgravia Roast ─────────────────────
+function NewArrivals({
+  settings,
+  products,
+}: {
+  settings?: Record<string, string> | null;
+  products: Product[];
+}) {
+  // Renders only when the database actually has new items (admin-added
+  // inside the NEW-badge window, or the catalog's own "new" badge).
+  const highlights = useQuery(api.cafe.getDailyHighlights);
+  const items = (highlights?.newIds ?? [])
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is Product => !!p && p.available)
+    .slice(0, 6);
+  if (highlights === undefined || items.length === 0) return null;
+  const cafeName = settings?.cafeName?.trim() || "The Belgravia Roast";
+  return (
+    <section className="py-12 sm:py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+          <div>
+            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 bg-gold/10 rounded-full px-4 py-1.5 mb-3">
+              <Sparkles className="h-3.5 w-3.5 text-gold" />
+              <span className="text-xs font-semibold text-gold uppercase tracking-wider">Just Arrived</span>
+            </motion.div>
+            <motion.h2 variants={fadeUp} custom={1} className="text-2xl sm:text-3xl font-bold text-foreground">
+              New at {cafeName}
+            </motion.h2>
+            <motion.p variants={fadeUp} custom={2} className="text-muted-foreground mt-1 text-sm">
+              Fresh additions to the menu — added straight from the kitchen
+            </motion.p>
+          </div>
+          <motion.div variants={fadeUp} custom={3}>
+            <Link to="/menu" className="text-sm font-semibold text-dusty-rose hover:text-burgundy transition-colors inline-flex items-center gap-1">
+              See the whole menu <ChevronRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+        </motion.div>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {items.map((item, i) => (
+            <motion.div key={item.id} variants={fadeUp} custom={i}>
+              <Link to={`/menu/${item.slug}`} className="group block bg-white rounded-2xl border border-border/50 overflow-hidden hover:shadow-lg transition-all duration-300">
+                <div className="relative h-28 overflow-hidden">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+                  <span className="absolute top-2 left-2 bg-gold text-white text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md">
+                    New
+                  </span>
+                </div>
+                <div className="p-3">
+                  <h3 className="text-xs font-semibold text-foreground group-hover:text-dusty-rose transition-colors line-clamp-2">
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm font-bold text-foreground">₹{item.discountPrice ?? item.price}</span>
+                    <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {item.rating}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -995,10 +1097,13 @@ export default function Landing() {
       <FindYourTable />
 
       {/* ══════════ TODAY'S SPECIAL ══════════ */}
-      <TodaySpecial settings={settings} />
+      <TodaySpecial settings={settings} products={allProducts} />
 
       {/* ══════════ DAYPART PICKS ══════════ */}
-      <DaypartPicks />
+      <DaypartPicks products={allProducts} />
+
+      {/* ══════════ NEW ARRIVALS (auto, from the database) ══════════ */}
+      <NewArrivals settings={settings} products={allProducts} />
 
       {/* ══════════ SIGNATURE DRINKS ══════════ */}
       {signature.length > 0 && (

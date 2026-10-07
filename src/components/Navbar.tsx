@@ -1,10 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList, CalendarDays } from "lucide-react";
+import { Search, ShoppingBag, User, Menu, X, Home, Coffee, Tag, Info, Phone, ChevronRight, ClipboardList, CalendarDays, Bell } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/hooks/use-auth";
+import { useCafeStatus } from "@/hooks/use-cafe-status";
+import { useLiveNotifications, useNotificationPermission } from "@/hooks/use-notifications";
+import { toast } from "sonner";
 import logo from "@/assets/logo.svg";
+
+// Solid strip colours per announcement tone (admin-managed).
+const ANNOUNCE_TONES: Record<string, string> = {
+  promo: "bg-dusty-rose text-white",
+  info: "bg-navy text-white/90",
+  alert: "bg-amber-400 text-navy",
+};
 
 const navLinks = [
   { to: "/", label: "Home", icon: Home },
@@ -33,6 +45,34 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { count } = useCart();
   const { isAuthenticated } = useAuth();
+  // Live, admin-published banner messages (appear/expire on schedule).
+  const announcements = useQuery(api.cafe.listActiveAnnouncements) ?? [];
+  // Convex re-runs queries on data changes, not on the clock — so enforce the
+  // [startAt, endAt) window locally on a 30s tick to auto appear/expire.
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const liveAnnouncements = announcements.filter((a) => a.startAt <= clock && a.endAt > clock);
+  // Live open / closing-soon / closed indicator from admin-configured hours.
+  const cafeStatus = useCafeStatus();
+  // Opt-in browser notifications for order/booking status + new announcements.
+  const notif = useNotificationPermission();
+  useLiveNotifications();
+  const [announceIdx, setAnnounceIdx] = useState(0);
+
+  useEffect(() => {
+    if (liveAnnouncements.length <= 1) return;
+    const id = window.setInterval(() => {
+      setAnnounceIdx((i) => (i + 1) % liveAnnouncements.length);
+    }, 6000);
+    return () => window.clearInterval(id);
+  }, [liveAnnouncements.length]);
+
+  const currentAnnouncement = liveAnnouncements.length
+    ? liveAnnouncements[announceIdx % liveAnnouncements.length]
+    : null;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -74,6 +114,21 @@ export default function Navbar() {
             : "bg-transparent"
         } ${onDark ? "text-white" : ""}`}
       >
+        {/* Scheduled announcements — only rendered when one is live */}
+        {currentAnnouncement && (
+          <motion.div
+            key={currentAnnouncement._id}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            className={`text-center text-[11px] sm:text-xs font-semibold tracking-wide py-1.5 px-4 ${
+              ANNOUNCE_TONES[currentAnnouncement.tone] ?? ANNOUNCE_TONES.info
+            }`}
+            role="status"
+          >
+            {currentAnnouncement.message}
+          </motion.div>
+        )}
+
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between lg:h-20">
             {/* Logo — The Belgravia Roast */}
@@ -120,6 +175,51 @@ export default function Navbar() {
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
+              {/* Live café status — 🟢 open / 🟡 closing soon / 🔴 closed */}
+              {cafeStatus && (
+                <span
+                  title={`Café hours: ${cafeStatus.openTime}–${cafeStatus.closeTime} (${cafeStatus.timezone})`}
+                  className="hidden sm:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-colors hover:bg-white/10"
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      cafeStatus.state === "open"
+                        ? "bg-sage animate-pulse"
+                        : cafeStatus.state === "closing_soon"
+                          ? "bg-amber-400 animate-pulse"
+                          : "bg-red-400"
+                    }`}
+                  />
+                  {cafeStatus.label}
+                </span>
+              )}
+
+              {/* Opt-in live notifications (permission requested only on click) */}
+              {notif.supported && notif.permission !== "denied" && (
+                <button
+                  onClick={async () => {
+                    if (notif.permission === "granted") {
+                      toast("Notifications are on — order & booking updates only, never spam.");
+                      return;
+                    }
+                    const result = await notif.enable();
+                    if (result === "granted") {
+                      toast.success("Notifications enabled — we'll ping you on order & booking updates.");
+                    } else if (result === "denied") {
+                      toast.error("Notifications are blocked — allow them in your browser settings to get updates.");
+                    }
+                  }}
+                  className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+                  aria-label={notif.permission === "granted" ? "Notifications enabled" : "Enable notifications"}
+                  title="Order & booking notifications"
+                >
+                  <Bell className={`h-4.5 w-4.5 ${onDark ? "text-white/80" : "text-foreground/70"}`} />
+                  {notif.permission === "granted" && (
+                    <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-sage" />
+                  )}
+                </button>
+              )}
+
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/10"

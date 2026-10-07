@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, Sparkles, BadgePercent } from "lucide-react";
+import { ArrowLeft, Clock, Flame, Star, Plus, Minus, ShoppingCart, Leaf, Heart, Sparkles, BadgePercent, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getProductBySlug, getProductsByCategory } from "@/data/menu";
@@ -10,7 +10,7 @@ import { addToCart } from "@/lib/cart";
 import { getComplements } from "@/lib/cafe";
 import { getComboFor } from "@/lib/combos";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
@@ -86,6 +86,11 @@ export default function ProductDetail() {
   const [selectedCustomizations, setSelectedCustomizations] = useState<Record<string, string>>({});
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const recordUpsell = useMutation(api.cafe.recordUpsellEvent);
+  // Real co-order data from past orders ("Customers also ordered").
+  // Returns [] until enough genuine order history exists — no fake data.
+  const recommendations = useQuery(api.cafe.getRecommendations, {
+    productId: product?.id ?? "",
+  });
 
   const combo = product ? getComboFor(product) : null;
   useEffect(() => {
@@ -127,6 +132,20 @@ export default function ProductDetail() {
   const related = getProductsByCategory(product.category)
     .filter((p) => p.id !== product.id)
     .slice(0, 3);
+
+  // "Customers also ordered": co-occurrence from real order history,
+  // excluding everything already shown in PerfectWith / You Might Also Like.
+  const seenIds = new Set<string>([product.id, ...related.map((r) => r.id)]);
+  getComplements(product).forEach((c) => seenIds.add(c.id));
+  const alsoOrdered: { item: (typeof allProducts)[number]; together: number }[] = [];
+  const recItems: { productId: string; together: number }[] = recommendations?.items ?? [];
+  recItems.forEach((r) => {
+    if (alsoOrdered.length >= 3 || seenIds.has(r.productId)) return;
+    const item = allProducts.find((p) => p.id === r.productId);
+    if (!item || !isAvailable(item.id)) return;
+    seenIds.add(item.id);
+    alsoOrdered.push({ item, together: r.together });
+  });
 
   const basePrice = product.discountPrice ?? product.price;
   let extraPrice = 0;
@@ -462,6 +481,53 @@ export default function ProductDetail() {
 
         {/* Perfect with */}
         <PerfectWith product={product} />
+
+        {/* Customers also ordered — driven by real order co-occurrence */}
+        {alsoOrdered.length > 0 && (
+          <div className="mt-16">
+            <div className="flex items-center gap-2 mb-6">
+              <Users className="h-4 w-4 text-sage" />
+              <h2 className="text-xl font-bold text-foreground">Customers Also Ordered</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {alsoOrdered.map(({ item, together }) => (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-2xl border border-border/50 p-3 flex items-center gap-4 hover:shadow-md transition-all"
+                >
+                  <Link to={`/menu/${item.slug}`} className="shrink-0">
+                    <img src={item.image} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      to={`/menu/${item.slug}`}
+                      className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block"
+                    >
+                      {item.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="font-bold text-foreground">₹{item.discountPrice ?? item.price}</span>
+                      <span className="text-[10px] font-semibold text-sage bg-sage/10 px-1.5 py-0.5 rounded-full">
+                        Ordered together {together}×
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      addToCart(item, 1);
+                      toast.success(`${item.name} added to cart`);
+                    }}
+                    aria-label={`Add ${item.name} to cart`}
+                    className="h-9 w-9 rounded-xl bg-gold text-white flex items-center justify-center text-lg font-bold hover:bg-gold/90 transition-all shrink-0"
+                  >
+                    +
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Related Items */}
         {related.length > 0 && (

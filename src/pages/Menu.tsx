@@ -91,11 +91,20 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
               {Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF
             </div>
           )}
+          {product.availability === "limited" && (
+            <div className="absolute top-1.5 right-1.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">
+              Limited
+            </div>
+          )}
           {!product.available && (
             <div className="absolute inset-0 bg-navy/70 flex items-center justify-center">
               <div className="text-center px-2">
-                <div className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out</div>
-                <div className="text-[9px] text-white/60 mt-0.5">Back tomorrow</div>
+                <div className="text-[10px] font-bold text-white uppercase tracking-wider">
+                  {product.availability === "unavailable" ? "Unavailable" : "Sold Out"}
+                </div>
+                <div className="text-[9px] text-white/60 mt-0.5">
+                  {product.availability === "unavailable" ? "Currently unavailable" : "Back tomorrow"}
+                </div>
               </div>
             </div>
           )}
@@ -132,6 +141,11 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
                 {product.description}
               </p>
             </div>
+            {product.availability === "limited" && (
+              <span className="shrink-0 flex items-center gap-1 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                Limited availability
+              </span>
+            )}
             {(product.badge === "bestseller" || product.bestSeller) && (
               <span className="shrink-0 flex items-center gap-1 bg-dusty-rose/10 text-dusty-rose text-[10px] font-bold px-2 py-0.5 rounded-full">
                 <Star className="h-2.5 w-2.5 fill-current" />

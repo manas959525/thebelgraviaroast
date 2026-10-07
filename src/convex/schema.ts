@@ -157,7 +157,13 @@ const schema = defineSchema(
       description: v.string(),
       title: v.optional(v.string()),
       tag: v.optional(v.string()),
-      discountType: v.union(v.literal("percentage"), v.literal("fixed")),
+      discountType: v.union(
+        v.literal("percentage"),
+        v.literal("fixed"),
+        // Buy X Get Y: for every (bogoX + bogoY) units in scope, the cheapest
+        // bogoY units are discounted by `discountValue` percent (100 = free).
+        v.literal("bogo"),
+      ),
       discountValue: v.number(),
       minOrder: v.number(),
       maxDiscount: v.optional(v.number()),
@@ -166,12 +172,35 @@ const schema = defineSchema(
       active: v.boolean(),
       usageLimit: v.optional(v.number()),
       usedCount: v.number(),
+      // ── Scheduling (all optional — legacy offers keep working) ──
+      // Restrict to weekdays (0 = Sunday … 6 = Saturday). Empty/absent = every day.
+      dailyDays: v.optional(v.array(v.number())),
+      // Café-local daily window in HH:MM, e.g. happy hours 15:00–18:00.
+      dailyStart: v.optional(v.string()),
+      dailyEnd: v.optional(v.string()),
+      // First-order-only offers (checked server-side against real orders).
+      firstOrderOnly: v.optional(v.boolean()),
+      // Product scope (catalog product ids). Empty/absent = whole menu.
+      scopeProductIds: v.optional(v.array(v.string())),
+      // Buy X Get Y quantities (defaults 1/1 when discountType is "bogo").
+      bogoX: v.optional(v.number()),
+      bogoY: v.optional(v.number()),
     }).index("by_code", ["code"]),
 
     // Availability overrides for static-catalog products (sold out / low stock).
+    // `status` is the richer 4-state availability; `available` is kept in sync
+    // for backwards compatibility (sold_out/unavailable → false).
     productFlags: defineTable({
       productId: v.string(),
       available: v.boolean(),
+      status: v.optional(
+        v.union(
+          v.literal("available"),
+          v.literal("sold_out"),
+          v.literal("unavailable"),
+          v.literal("limited"),
+        ),
+      ),
       note: v.optional(v.string()),
     }).index("by_product", ["productId"]),
 
@@ -214,6 +243,18 @@ const schema = defineSchema(
       value: v.string(),
     }).index("by_key", ["key"]),
 
+    // Scheduled homepage banner messages. Auto appear/disappear by time window.
+    announcements: defineTable({
+      message: v.string(),
+      tone: v.union(v.literal("info"), v.literal("promo"), v.literal("alert")),
+      startAt: v.number(),
+      endAt: v.number(),
+      active: v.boolean(),
+      createdAt: v.number(),
+    })
+      .index("by_active", ["active"])
+      .index("by_startAt", ["startAt"]),
+
     // Table reservations made from the public Reservations page.
     reservations: defineTable({
       name: v.string(),
@@ -237,7 +278,9 @@ const schema = defineSchema(
     })
       .index("by_date", ["date"])
       .index("by_status", ["status"])
-      .index("by_phone", ["phone"]),
+      .index("by_phone", ["phone"])
+      // Lets signed-in customers watch their own bookings live (notifications).
+      .index("by_user", ["userId"]),
 
     // Inventory tracking for the admin dashboard (ingredients / supplies).
     inventory: defineTable({

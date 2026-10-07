@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -21,11 +21,43 @@ const DEFAULT_STYLE = { icon: Sparkles, color: "from-gold/20 to-gold/5", borderC
 const fmtValidUntil = (ts: number) =>
   new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
-const fmtDiscount = (o: { discountType: "percentage" | "fixed"; discountValue: number }) =>
-  o.discountType === "percentage" ? `${o.discountValue}% Off` : `₹${o.discountValue} Off`;
+// Live countdown state for limited-time offers.
+const useNow = (intervalMs = 30_000) => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(id);
+  }, [intervalMs]);
+  return now;
+};
+
+const formatRemaining = (ms: number) => {
+  if (ms <= 0) return "moments";
+  const totalMin = Math.floor(ms / 60_000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const minutes = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
+};
+
+const fmtDiscount = (o: {
+  discountType: "percentage" | "fixed" | "bogo";
+  discountValue: number;
+  bogoX?: number | null;
+  bogoY?: number | null;
+}) =>
+  o.discountType === "percentage"
+    ? `${o.discountValue}% Off`
+    : o.discountType === "fixed"
+      ? `₹${o.discountValue} Off`
+      : `Buy ${o.bogoX ?? 1} Get ${o.bogoY ?? 1}`;
 
 export default function OffersPage() {
   const [copied, setCopied] = useState<string | null>(null);
+  // Ticks so limited-time offers show a live countdown.
+  const now = useNow();
   // Live offers from the database; the admin manages these in Offers & Coupons.
   const offersQuery = useQuery(api.cafe.listActiveOffers);
   const offers = (offersQuery ?? []).map((o) => ({
@@ -38,6 +70,9 @@ export default function OffersPage() {
     minOrder: o.minOrder > 0 ? `₹${o.minOrder}` : "No minimum",
     tag: o.tag ?? "Special",
     style: TAG_STYLES[o.tag ?? ""] ?? DEFAULT_STYLE,
+    remainingMs: o.validUntil - now,
+    dailyWindow:
+      o.dailyStart && o.dailyEnd ? `Daily ${o.dailyStart}–${o.dailyEnd}` : null,
   }));
 
   const handleCopy = (code: string) => {
@@ -105,10 +140,21 @@ export default function OffersPage() {
                   </div>
                   <h3 className="font-bold text-foreground text-lg mb-2">{offer.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4">{offer.desc}</p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground mb-4">
                     <span>Min: {offer.minOrder}</span>
                     <span>Valid till: {offer.validTill}</span>
                     <span className="font-bold text-gold">{offer.discount}</span>
+                    {offer.dailyWindow && (
+                      <span className="inline-flex items-center gap-1 text-blue-600/80">
+                        <Clock className="h-3 w-3" /> {offer.dailyWindow}
+                      </span>
+                    )}
+                    {/* Countdown only for offers that are about to end */}
+                    {offer.remainingMs <= 72 * 60 * 60 * 1000 && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-600 animate-pulse">
+                        <Zap className="h-3 w-3" /> Ends in {formatRemaining(offer.remainingMs)}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => handleCopy(offer.code)}
