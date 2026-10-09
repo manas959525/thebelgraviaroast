@@ -92,7 +92,7 @@ function ProductCard({ item, index }: { item: ReturnType<typeof getBestSellers>[
     >
       <Link to={`/menu/${item.slug}`}>
         <div className="relative h-48 overflow-hidden">
-          <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           {item.badge && (
             <div className={`absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${
@@ -467,7 +467,7 @@ function DaypartPicks({ products }: { products: Product[] }) {
             <motion.div key={item.id} variants={fadeUp} custom={i} className="bg-white rounded-2xl border border-border/50 overflow-hidden group hover:shadow-lg transition-all duration-300">
               <Link to={`/menu/${item.slug}`}>
                 <div className="relative h-40 overflow-hidden">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
                   <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 text-foreground px-2 py-1 rounded-lg">
                     #{i + 1} pick
@@ -539,7 +539,7 @@ function NewArrivals({
             <motion.div key={item.id} variants={fadeUp} custom={i}>
               <Link to={`/menu/${item.slug}`} className="group block bg-white rounded-2xl border border-border/50 overflow-hidden hover:shadow-lg transition-all duration-300">
                 <div className="relative h-28 overflow-hidden">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
                   <span className="absolute top-2 left-2 bg-gold text-white text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md">
                     New
@@ -653,7 +653,7 @@ function QuickOrder() {
                   className="mt-6 bg-white rounded-2xl border border-border/50 overflow-hidden text-left shadow-lg"
                 >
                   <div className="flex flex-col sm:flex-row">
-                    <img src={surprise.image} alt={surprise.name} className="sm:w-44 h-36 sm:h-auto object-cover" />
+                    <img src={surprise.image} alt={surprise.name} loading="lazy" decoding="async" className="sm:w-44 h-36 sm:h-auto object-cover" />
                     <div className="p-5 flex-1">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-dusty-rose mb-1">Today's pick for you</div>
                       <h4 className="font-bold text-foreground mb-1">{surprise.name}</h4>
@@ -747,7 +747,13 @@ const fallbackReviews = [
 // ── MAIN LANDING ────────────────────────────────────
 export default function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const [introComplete, setIntroComplete] = useState(false);
+  const [introComplete, setIntroComplete] = useState(
+    // Respect prefers-reduced-motion: skip the cinematic intro overlay so the
+    // hero is immediately visible for users who asked for less motion.
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -1236,7 +1242,7 @@ export default function Landing() {
               </Link>
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative rounded-3xl overflow-hidden h-80 lg:h-96">
-              <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&h=600&fit=crop" alt="Coffee preparation" className="w-full h-full object-cover" />
+              <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&h=600&fit=crop" alt="Coffee preparation" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent" />
             </motion.div>
           </div>

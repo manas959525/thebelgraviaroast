@@ -94,6 +94,8 @@ export default function About() {
               <img
                 src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&h=600&fit=crop"
                 alt="Coffee preparation"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent" />

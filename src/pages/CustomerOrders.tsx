@@ -202,7 +202,7 @@ export default function CustomerOrders() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {favouriteProducts.map((product) => (
                       <div key={product.id} className="glass-elevated rounded-2xl border-0 p-4 flex gap-4 items-center hover:shadow-md transition-all">
-                        <img src={product.image} alt={product.name} className="h-16 w-16 rounded-xl object-cover shrink-0" />
+                        <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="h-16 w-16 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <Link to={`/menu/${product.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
                             {product.name}

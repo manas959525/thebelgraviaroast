@@ -7,29 +7,94 @@ import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { MotionConfig } from "framer-motion";
 import "./index.css";
 import CafeAssistant from "./components/CafeAssistant";
 
-// Lazy load all route components
-const Landing = lazy(() => import("./pages/Landing.tsx"));
-const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const MenuPage = lazy(() => import("./pages/Menu.tsx"));
-const ProductDetail = lazy(() => import("./pages/ProductDetail.tsx"));
-const CartPage = lazy(() => import("./pages/Cart.tsx"));
-const CheckoutPage = lazy(() => import("./pages/Checkout.tsx"));
-const PaymentPage = lazy(() => import("./pages/Payment.tsx"));
-const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
-const TrackOrder = lazy(() => import("./pages/TrackOrder.tsx"));
-const CustomerOrders = lazy(() => import("./pages/CustomerOrders.tsx"));
-const About = lazy(() => import("./pages/About.tsx"));
-const Offers = lazy(() => import("./pages/Offers.tsx"));
-const Contact = lazy(() => import("./pages/Contact.tsx"));
-const ReservationsPage = lazy(() => import("./pages/Reservations.tsx"));
-const TableOrdering = lazy(() => import("./pages/TableOrdering.tsx"));
-const BuildYourDrink = lazy(() => import("./pages/BuildYourDrink.tsx"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
-const Kitchen = lazy(() => import("./pages/Kitchen.tsx"));
+// Lazy load all route components. Each importer is kept as a named function so
+// it can also be used to warm the chunk during browser idle time (below), which
+// prevents the full-screen Suspense fallback from flashing on navigation.
+const loadLanding = () => import("./pages/Landing.tsx");
+const loadAuthPage = () => import("./pages/Auth.tsx");
+const loadNotFound = () => import("./pages/NotFound.tsx");
+const loadMenuPage = () => import("./pages/Menu.tsx");
+const loadProductDetail = () => import("./pages/ProductDetail.tsx");
+const loadCartPage = () => import("./pages/Cart.tsx");
+const loadCheckoutPage = () => import("./pages/Checkout.tsx");
+const loadPaymentPage = () => import("./pages/Payment.tsx");
+const loadOrderConfirmation = () => import("./pages/OrderConfirmation.tsx");
+const loadTrackOrder = () => import("./pages/TrackOrder.tsx");
+const loadCustomerOrders = () => import("./pages/CustomerOrders.tsx");
+const loadAbout = () => import("./pages/About.tsx");
+const loadOffers = () => import("./pages/Offers.tsx");
+const loadContact = () => import("./pages/Contact.tsx");
+const loadReservationsPage = () => import("./pages/Reservations.tsx");
+const loadTableOrdering = () => import("./pages/TableOrdering.tsx");
+const loadBuildYourDrink = () => import("./pages/BuildYourDrink.tsx");
+const loadAdminDashboard = () => import("./pages/AdminDashboard.tsx");
+const loadKitchen = () => import("./pages/Kitchen.tsx");
+
+const Landing = lazy(loadLanding);
+const AuthPage = lazy(loadAuthPage);
+const NotFound = lazy(loadNotFound);
+const MenuPage = lazy(loadMenuPage);
+const ProductDetail = lazy(loadProductDetail);
+const CartPage = lazy(loadCartPage);
+const CheckoutPage = lazy(loadCheckoutPage);
+const PaymentPage = lazy(loadPaymentPage);
+const OrderConfirmation = lazy(loadOrderConfirmation);
+const TrackOrder = lazy(loadTrackOrder);
+const CustomerOrders = lazy(loadCustomerOrders);
+const About = lazy(loadAbout);
+const Offers = lazy(loadOffers);
+const Contact = lazy(loadContact);
+const ReservationsPage = lazy(loadReservationsPage);
+const TableOrdering = lazy(loadTableOrdering);
+const BuildYourDrink = lazy(loadBuildYourDrink);
+const AdminDashboard = lazy(loadAdminDashboard);
+const Kitchen = lazy(loadKitchen);
+
+const routeLoaders = [
+  loadLanding,
+  loadMenuPage,
+  loadCartPage,
+  loadAuthPage,
+  loadProductDetail,
+  loadOffers,
+  loadAbout,
+  loadContact,
+  loadTrackOrder,
+  loadCheckoutPage,
+  loadCustomerOrders,
+  loadReservationsPage,
+  loadPaymentPage,
+  loadOrderConfirmation,
+  loadTableOrdering,
+  loadBuildYourDrink,
+  loadNotFound,
+  loadAdminDashboard,
+  loadKitchen,
+];
+
+// Warm route chunks once the browser is idle so client-side navigation doesn't
+// stall on a network fetch (and flash the full-screen loading fallback).
+// Staggered to avoid a bandwidth spike; skipped entirely on data-saver connections.
+function prefetchRouteChunks() {
+  const connection = (
+    navigator as Navigator & { connection?: { saveData?: boolean } }
+  ).connection;
+  if (connection?.saveData) return;
+  const warm = () => {
+    routeLoaders.forEach((load, i) => window.setTimeout(load, i * 120));
+  };
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(warm, { timeout: 4000 });
+  } else {
+    // Global setTimeout: `window` is narrowed to `never` in this branch since
+    // requestIdleCallback is a known Window member in the TS DOM lib.
+    setTimeout(warm, 2500);
+  }
+}
 
 function RouteLoading() {
   return (
@@ -119,6 +184,9 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Warm lazily-loaded route chunks once the first paint has settled.
+window.addEventListener("load", () => prefetchRouteChunks(), { once: true });
+
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -149,6 +217,7 @@ createRoot(document.getElementById("root")!).render(
         <VlyToolbar />
       </ToolbarErrorBoundary>
       <ConvexAuthProvider client={convex}>
+        <MotionConfig reducedMotion="user">
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
@@ -194,6 +263,7 @@ createRoot(document.getElementById("root")!).render(
             </Routes>
           </Suspense>
         </BrowserRouter>
+        </MotionConfig>
         <Toaster />
       </ConvexAuthProvider>
     </RootErrorBoundary>

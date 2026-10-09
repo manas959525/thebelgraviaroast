@@ -224,7 +224,7 @@ export default function TableOrdering() {
                 {filtered.map((product) => (
                   <div key={product.id} className={`bg-white rounded-2xl border overflow-hidden ${product.available ? "border-border/50" : "border-border/40 opacity-70"}`}>
                     <div className="relative">
-                      <img src={product.image} alt={product.name} className="h-36 w-full object-cover" />
+                      <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="h-36 w-full object-cover" />
                       {!product.available && (
                         <div className="absolute inset-0 bg-navy/70 flex items-center justify-center">
                           <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out Today</span>
@@ -269,7 +269,7 @@ export default function TableOrdering() {
               <div className="space-y-3 mb-6">
                 {cartItems.map((item, idx) => (
                   <div key={`${item.product.id}-${idx}`} className="flex items-center gap-4 bg-white rounded-xl border border-border/50 p-3">
-                    <img src={item.product.image} alt={item.product.name} className="h-14 w-14 rounded-lg object-cover" />
+                    <img src={item.product.image} alt={item.product.name} loading="lazy" decoding="async" className="h-14 w-14 rounded-lg object-cover" />
                     <div className="flex-1">
                       <h3 className="font-medium text-sm">{item.product.name}</h3>
                       <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>

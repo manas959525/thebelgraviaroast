@@ -84,6 +84,8 @@ function MenuCard({ product, index }: { product: Product; index: number }) {
           <img
             src={product.image}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           {product.discountPrice && (
@@ -377,7 +379,7 @@ export default function MenuPage() {
               >
                 <div className="glass-elevated liquid-sheen-slow rounded-2xl border border-dusty-rose/30 overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
-                    <img src={surprise.image} alt={surprise.name} className="sm:w-32 h-28 sm:h-auto object-cover" />
+                    <img src={surprise.image} alt={surprise.name} loading="lazy" decoding="async" className="sm:w-32 h-28 sm:h-auto object-cover" />
                     <div className="p-4 flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
                       <div className="flex-1">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-dusty-rose mb-0.5">

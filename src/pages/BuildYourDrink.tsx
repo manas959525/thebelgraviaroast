@@ -158,7 +158,7 @@ export default function BuildYourDrink() {
                     {bases.map((b) => (
                       <button key={b.id} onClick={() => { setBase(b); setStep(1); }} className={optionCard(base?.id === b.id)}>
                         <div className="h-24 overflow-hidden rounded-lg mb-2">
-                          <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+                          <img src={b.image} alt={b.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         </div>
                         <div className="font-semibold text-sm text-foreground">{b.name}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">₹{b.discountPrice ?? b.price}</div>

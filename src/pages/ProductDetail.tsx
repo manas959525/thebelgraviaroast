@@ -49,7 +49,7 @@ function PerfectWith({ product }: { product: ReturnType<typeof getProductBySlug>
             className="bg-white rounded-2xl border border-border/50 p-3 flex items-center gap-4 hover:shadow-md transition-all"
           >
             <Link to={`/menu/${item.slug}`} className="shrink-0">
-              <img src={item.image} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />
+              <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-16 w-16 rounded-xl object-cover" />
             </Link>
             <div className="flex-1 min-w-0">
               <Link to={`/menu/${item.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
@@ -415,7 +415,7 @@ export default function ProductDetail() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <img src={combo.pair.image} alt={combo.pair.name} className="h-14 w-14 rounded-xl object-cover border-2 border-white/30" />
+                        <img src={combo.pair.image} alt={combo.pair.name} loading="lazy" decoding="async" className="h-14 w-14 rounded-xl object-cover border-2 border-white/30" />
                         <span className="absolute -top-1.5 -right-1.5 bg-gold text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                           +1
                         </span>
@@ -496,7 +496,7 @@ export default function ProductDetail() {
                   className="bg-white rounded-2xl border border-border/50 p-3 flex items-center gap-4 hover:shadow-md transition-all"
                 >
                   <Link to={`/menu/${item.slug}`} className="shrink-0">
-                    <img src={item.image} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />
+                    <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-16 w-16 rounded-xl object-cover" />
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link
@@ -540,7 +540,7 @@ export default function ProductDetail() {
                   to={`/menu/${item.slug}`}
                   className="bg-white rounded-2xl overflow-hidden border border-border/50 shadow-sm hover:shadow-lg transition-all"
                 >
-                  <img src={item.image} alt={item.name} className="h-40 w-full object-cover" />
+                  <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-40 w-full object-cover" />
                   <div className="p-4">
                     <h3 className="font-semibold text-sm text-foreground">{item.name}</h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>

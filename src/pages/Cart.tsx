@@ -71,7 +71,7 @@ export default function CartPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {suggestions.map((item) => (
                         <div key={item.id} className="glass-chip rounded-xl p-3 flex items-center gap-3">
-                          <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover shrink-0" />
+                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-14 w-14 rounded-lg object-cover shrink-0" />
                           <div className="flex-1 min-w-0">
                             <Link to={`/menu/${item.slug}`} className="font-semibold text-sm text-foreground hover:text-dusty-rose transition-colors truncate block">
                               {item.name}
@@ -100,6 +100,8 @@ export default function CartPage() {
                         <img
                           src={combo.pair.image}
                           alt={combo.pair.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-14 w-14 rounded-xl object-cover border-2 border-white/30 shrink-0"
                         />
                         <div className="min-w-0">
@@ -149,6 +151,8 @@ export default function CartPage() {
                         <img
                           src={item.product.image}
                           alt={item.product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-20 w-20 rounded-xl object-cover shrink-0"
                         />
                         <div className="flex-1 min-w-0">

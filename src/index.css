@@ -161,6 +161,18 @@
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
+
+  /* Consistent, short interaction feedback for controls that don't declare
+     their own transition. Only color-ish properties are listed so framer-motion
+     (transform/opacity) animations are never intercepted, and explicit
+     Tailwind transition-* utilities still override this (utilities layer). */
+  button:not([disabled]),
+  [role="button"]:not([disabled]),
+  a[href] {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
 }
 
 /* === Brand Utilities === */

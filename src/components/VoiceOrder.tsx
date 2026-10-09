@@ -224,7 +224,7 @@ export default function VoiceOrder({ variant = "button" }: { variant?: "button" 
                       <div className="space-y-2 mb-5">
                         {parsed.map((line, i) => (
                           <div key={i} className="flex items-center gap-3 bg-white border border-border rounded-xl p-3">
-                            <img src={line.product.image} alt={line.product.name} className="h-10 w-10 rounded-lg object-cover" />
+                            <img src={line.product.image} alt={line.product.name} loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" />
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-semibold text-foreground truncate">{line.product.name}</div>
                               <div className="text-xs text-muted-foreground">

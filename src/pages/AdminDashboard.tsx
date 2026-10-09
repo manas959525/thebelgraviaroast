@@ -924,7 +924,7 @@ function ProductsView() {
             return (
             <div key={p.id} className="glass-elevated rounded-2xl border-0 overflow-hidden group">
               <div className="relative h-40 overflow-hidden">
-                <img src={p.image} alt={p.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${!effective(p.id) ? "grayscale" : ""}`} />
+                <img src={p.image} alt={p.name} loading="lazy" decoding="async" className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${!effective(p.id) ? "grayscale" : ""}`} />
                 {!effective(p.id) && (
                   <div className="absolute inset-0 bg-navy/60 flex items-center justify-center">
                     <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out Today</span>
@@ -969,7 +969,7 @@ function ProductsView() {
                 return (
                 <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3 flex items-center gap-3">
-                    <img src={p.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                    <img src={p.image} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" />
                     <div>
                       <div className="font-medium">
                         {p.name}
@@ -2195,7 +2195,7 @@ function AnalyticsView() {
               return (
                 <div key={item.name} className="flex items-center gap-4">
                   <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}.</span>
-                  {product && <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                  {product && <img src={product.image} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" />}
                   <div className="flex-1">
                     <div className="text-sm font-medium">{item.name}</div>
                     <div className="text-xs text-muted-foreground">{item.qty} sold · ₹{item.revenue}</div>
